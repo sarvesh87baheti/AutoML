@@ -1,0 +1,9 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Pytest cache (we have this)
+.pytest_cache/
+
+# Editor folders sometimes created
+.vscode/
