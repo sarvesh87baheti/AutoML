@@ -1,6 +1,6 @@
-import importlib.util
+import importlib
+import pkgutil
 from pathlib import Path
-from typing import Dict, Any
 
 from main.model_scripts.base import validate_module
 
@@ -11,40 +11,55 @@ class RegressionTrainer:
         self.output_path = output_path
 
     def _load_models(self):
+        """
+        Properly import model scripts as part of the package `main.model_scripts`
+        so that relative imports inside those scripts work correctly.
+        """
         model_classes = []
+        package_name = "main.model_scripts"
 
-        for f in self.scripts_path.glob("*.py"):
-            if f.name in ("__init__.py", "base.py", "utils.py"):
-                continue
+        # Discover modules inside model_scripts/ using pkgutil
+        for _, module_name, _ in pkgutil.iter_modules([str(self.scripts_path)]):
 
-            spec = importlib.util.spec_from_file_location(f.stem, f)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            # Import module as: main.model_scripts.module_name
+            full_module_name = f"{package_name}.{module_name}"
+            module = importlib.import_module(full_module_name)
 
-            ok, reason = validate_module(module)
+            # Validate module implements required structure
+            ok, _ = validate_module(module)
             if not ok:
                 continue
 
-            if "regression" in module.SUPPORTED_PROBLEM_TYPES:
-                model_classes.append(module.Model)
+            # Filter only regression models
+            supported = getattr(module, "SUPPORTED_PROBLEM_TYPES", [])
+            if "regression" not in supported:
+                continue
+
+            ModelClass = getattr(module, "Model", None)
+            if ModelClass is not None:
+                model_classes.append(ModelClass)
 
         return model_classes
 
     def train_all(self, X_train, y_train, X_val, y_val):
+        """
+        Train all regression model scripts found in model_scripts/.
+        Each model script handles its own saving via save_path.
+        """
         models = self._load_models()
         results = {}
 
         for ModelClass in models:
-            model_name = ModelClass.MODEL_NAME  # ✅ AVAILABLE BEFORE training
+            model_name = ModelClass.MODEL_NAME
             save_path = self.output_path / f"{model_name}.joblib"
 
-            model_obj = ModelClass()
-            pipe, metrics, metadata = model_obj.train_model(
+            model = ModelClass()
+            pipe, metrics, metadata = model.train_model(
                 X_train=X_train,
                 y_train=y_train,
                 X_val=X_val,
                 y_val=y_val,
-                save_path=save_path  # ✅ Model script will save the file
+                save_path=save_path
             )
 
             results[model_name] = {
@@ -53,5 +68,3 @@ class RegressionTrainer:
             }
 
         return results
-
-
