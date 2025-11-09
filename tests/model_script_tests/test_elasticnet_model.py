@@ -30,9 +30,7 @@ def test_elasticnet_model_training(tmp_path):
         X_train=X_train,
         y_train=y_train,
         save_path=save_file,
-        scale=True,
-        alpha=0.1,          # ElasticNet defaults still work
-        l1_ratio=0.5
+        scale=True
     )
 
     # ✅ Pipeline exists
