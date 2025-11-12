@@ -3,13 +3,13 @@ import pandas as pd
 import json
 import os
 from pathlib import Path
-from datacleaning import clean_dataframe
+from .datacleaning import clean_dataframe
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from scipy.sparse import hstack, issparse, save_npz
 from typing import Optional
-from EDA import perform_eda, plot_correlation_heatmap, pca_reduction
+from .EDA import perform_eda, plot_correlation_heatmap, pca_reduction
 
 def infer_task_type(y: pd.Series, classification_threshold=20, ratio_threshold=0.05):
     """Infer ML task type (classification or regression)."""
@@ -193,19 +193,18 @@ def process_features(
         "task_type": task_type
     }
 
-if __name__ == "__main__":
+# Refer here to run preprocessing on all files in a directory
+# if __name__ == "__main__":
 
-    for files in os.listdir('main/raw_data'):
-        if files.endswith('.csv'):
-            df = pd.read_csv(os.path.join('main/raw_data',files))
-            df= clean_dataframe(df)
-            result = process_features(df, target_col="Sales ($)", save_dir="./processed_data")
-            print(result)
-        if files.endswith('.xlsx'):
-            df = pd.read_excel(os.path.join('main/raw_data',files))
-            df= clean_dataframe(df)
-            result = process_features(df, target_col="Sales ($)", save_dir="./processed_data")
-            print(result)
+#     for files in os.listdir('main/raw_data'):
+#         if files.endswith('.csv'):
+#             df = pd.read_csv(os.path.join('main/raw_data',files))
+#             df= clean_dataframe(df)
+#             result = process_features(df, target_col="Sales ($)", save_dir="./processed_data")
+#         if files.endswith('.xlsx'):
+#             df = pd.read_excel(os.path.join('main/raw_data',files))
+#             df= clean_dataframe(df)
+#             result = process_features(df, target_col="Sales ($)", save_dir="./processed_data")
     
     
     

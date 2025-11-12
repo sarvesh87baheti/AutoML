@@ -1,0 +1,19 @@
+{
+    "problem_type": "regression",
+    "target": "Sales ($)",
+    "n_features": 3,
+    "train_samples": 158,
+    "val_samples": 40,
+    "feature_matrix_format": "dense_npy",
+    "categorical_cols": [],
+    "text_cols": [],
+    "numeric_cols": [
+        "TV Ad Budget ($)",
+        "Radio Ad Budget ($)",
+        "Newspaper Ad Budget ($)"
+    ],
+    "encoders": [],
+    "vectorizers": [],
+    "scaler_present": true,
+    "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
+}
