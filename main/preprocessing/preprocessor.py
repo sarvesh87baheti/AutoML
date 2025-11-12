@@ -193,7 +193,7 @@ def process_features(
         "task_type": task_type
     }
 
-if __name__ == "_main_":
+if __name__ == "__main__":
 
     for files in os.listdir('main/raw_data'):
         if files.endswith('.csv'):
@@ -209,3 +209,4 @@ if __name__ == "_main_":
     
     
     
+
