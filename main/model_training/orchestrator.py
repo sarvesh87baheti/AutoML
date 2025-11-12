@@ -4,7 +4,7 @@ import numpy as np
 from typing import Dict, Any
 
 from .regression import RegressionTrainer
-# from .classification import ClassificationTrainer
+from .classification import ClassificationTrainer
 
 def load_processed_dataset(path: Path):
     X_train = np.load(path / "X_train.npy")
@@ -31,8 +31,8 @@ class Orchestrator:
 
         if problem_type == "regression":
             trainer = RegressionTrainer(self.model_scripts_path, self.output_path)
-        # elif problem_type == "classification":
-        #     trainer = ClassificationTrainer(self.model_scripts_path, self.output_path)
+        elif problem_type == "classification":
+            trainer = ClassificationTrainer(self.model_scripts_path, self.output_path)
         else:
             raise ValueError(f"Unsupported problem type: {problem_type}")
 

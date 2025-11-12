@@ -5,8 +5,9 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 
-from .utils import _ensure_array, evaluate_classification_model
-from .base import ModelScript
+from main.model_scripts.utils import _ensure_array, evaluate_classification_model
+from main.model_scripts.base import ModelScript
+
 
 MODEL_NAME = "randomforest"
 SUPPORTED_PROBLEM_TYPES = ["classification"]

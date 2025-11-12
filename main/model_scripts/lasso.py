@@ -6,8 +6,8 @@ from sklearn.linear_model import Lasso
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from .utils import _ensure_array, evaluate_model
-from .base import ModelScript
+from main.model_scripts.utils import _ensure_array, evaluate_model
+from main.model_scripts.base import ModelScript
 
 MODEL_NAME = "lasso"
 SUPPORTED_PROBLEM_TYPES = ["regression"]

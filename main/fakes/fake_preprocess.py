@@ -48,7 +48,7 @@ def fake_preprocess(csv_path: str, output_dir: str, target_column: str = None):
 
     # Metadata file
     metadata = {
-        "problem_type": "regression",
+        "problem_type": "classification",
         "target": target_column,
         "n_features": X_train.shape[1],
         "train_samples": X_train.shape[0],

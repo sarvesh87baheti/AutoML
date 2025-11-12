@@ -6,8 +6,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from .utils import _ensure_array, evaluate_model
-from .base import ModelScript
+from main.model_scripts.utils import _ensure_array, evaluate_model
+from main.model_scripts.base import ModelScript
 
 MODEL_NAME = "linear"
 SUPPORTED_PROBLEM_TYPES = ["regression"]
