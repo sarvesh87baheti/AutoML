@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import json
+import os
 from pathlib import Path
 from datacleaning import clean_dataframe
 from sklearn.preprocessing import LabelEncoder, StandardScaler
@@ -192,12 +193,19 @@ def process_features(
         "task_type": task_type
     }
 
-if _name_ == "_main_":
+if __name__ == "_main_":
+
+    for files in os.listdir('main/raw_data'):
+        if files.endswith('.csv'):
+            df = pd.read_csv(os.path.join('main/raw_data',files))
+            df= clean_dataframe(df)
+            result = process_features(df, target_col="Sales ($)", save_dir="./processed_data")
+            print(result)
+        if files.endswith('.xlsx'):
+            df = pd.read_excel(os.path.join('main/raw_data',files))
+            df= clean_dataframe(df)
+            result = process_features(df, target_col="Sales ($)", save_dir="./processed_data")
+            print(result)
     
     
-    df = pd.read_csv(r'C:\Users\sri dattu\AutoML\main\raw_data\advertising.csv')
-    df= clean_dataframe(df)
-
-    result = process_features(df, target_col="Sales ($)", save_dir="./processed_data")
-
-    print(result)
+    
