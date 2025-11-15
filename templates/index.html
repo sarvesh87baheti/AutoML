@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoML System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✨ AutoML System ✨</h1>
+      <p>Machine Learning Made Simple</p>
+    </div>
+
+    <div class="card">
+      <h2>Data Analysis Setup</h2>
+      <p class="subtitle">Upload your file and select the problem type to begin</p>
+
+      <form action="/upload" method="POST" enctype="multipart/form-data">
+        <!-- CSV Upload -->
+        <div class="form-group">
+          <label class="label" for="dataset">📂 File</label>
+          <label class="upload-box" for="dataset">
+            <input type="file" id="dataset" name="dataset" accept=".csv" required>
+            <span class="upload-text">Click to upload file</span>
+            <span class="upload-hint">Accepts csv, xlsx, zip files only</span>
+          </label>
+        </div>
+
+        <!-- Problem Type Dropdown -->
+        <div class="form-group">
+          <label class="label" for="problem">🧠 Problem Type</label>
+          <select id="problem" name="problem" required>
+            <option value="">Select problem type</option>
+            <option value="classification">Classification</option>
+            <option value="regression">Regression</option>
+            <option value="clustering">Clustering</option>
+          </select>
+        </div>
+
+        <label>Target Column (only for regression/classification)</label>
+        <input type="text" name="target_col" placeholder="Example: price">
+
+        <button type="submit" class="btn">Start AutoML Process</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
