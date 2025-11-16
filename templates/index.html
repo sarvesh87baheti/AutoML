@@ -23,7 +23,7 @@
         <div class="form-group">
           <label class="label" for="dataset">📂 File</label>
           <label class="upload-box" for="dataset">
-            <input type="file" id="dataset" name="dataset" accept=".csv" required>
+            <input type="file" id="dataset" name="dataset" accept=".csv, .xlsx, .zip" required>
             <span class="upload-text">Click to upload file</span>
             <span class="upload-hint">Accepts csv, xlsx, zip files only</span>
           </label>
@@ -32,7 +32,7 @@
         <!-- Problem Type Dropdown -->
         <div class="form-group">
           <label class="label" for="problem">🧠 Problem Type</label>
-          <select id="problem" name="problem" required>
+          <select id="problem" name="problem_type" required>
             <option value="">Select problem type</option>
             <option value="classification">Classification</option>
             <option value="regression">Regression</option>
@@ -47,5 +47,17 @@
       </form>
     </div>
   </div>
+
+  <script>
+document.getElementById("dataset").addEventListener("change", function() {
+    const file = this.files[0];
+
+    if (file) {
+        document.querySelector(".upload-text").innerText = "Selected: " + file.name;
+        document.querySelector(".upload-text").style.color = "#2ecc71";  // green
+    }
+});
+</script>
+
 </body>
 </html>
