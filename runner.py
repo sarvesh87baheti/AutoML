@@ -15,7 +15,7 @@ if str(ROOT.parent) not in sys.path:
 from main.preprocessing.datacleaning import clean_dataframe
 from main.preprocessing.preprocessor import process_features
 from main.model_training.orchestrator import Orchestrator
-
+from main.final_model_selection.final_model_sel import compute_model_scores
 
 def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     """
@@ -119,7 +119,7 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     print("\n✅ AutoML Pipeline completed successfully.")
     print(f"All trained models saved in: {results_dir}\n")
 
-    return results
+    return compute_model_scores(results)
 
 
 def main():
