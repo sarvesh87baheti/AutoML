@@ -46,6 +46,9 @@ def upload_file():
         })
 
     except Exception as e:
+        import traceback
+        print(f"❌ Error in upload_file: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 
