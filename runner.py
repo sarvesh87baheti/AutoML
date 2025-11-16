@@ -3,6 +3,7 @@ import argparse
 import json
 import pandas as pd
 from pathlib import Path
+import zipfile  
 import sys, os
 
 # --- Universal import fix (works anywhere: CLI or UI) ---
@@ -49,8 +50,25 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
         df = pd.read_csv(dataset_path)
     elif dataset_path.suffix.lower() in [".xls", ".xlsx"]:
         df = pd.read_excel(dataset_path)
+    elif dataset_path.suffix.lower() == ".zip":
+        with zipfile.ZipFile(dataset_path, 'r') as z:
+            file_list = z.namelist()
+            csv_files = [f for f in file_list if f.lower().endswith(".csv")]
+            xlsx_files = [f for f in file_list if f.lower().endswith((".xls", ".xlsx"))]
+
+            if csv_files:
+                with z.open(csv_files[0]) as f:
+                    df = pd.read_csv(f)
+            elif xlsx_files:
+                with z.open(xlsx_files[0]) as f:
+                    df = pd.read_excel(f)
+            else:
+                raise ValueError("ZIP file does not contain a CSV or XLSX file.")
+        
+    
     else:
         raise ValueError("Unsupported file format. Use .csv or .xlsx")
+    
 
     print("🧹 Cleaning dataset...")
     df = clean_dataframe(df)
