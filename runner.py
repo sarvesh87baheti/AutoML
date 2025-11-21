@@ -118,8 +118,22 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
 
     print("\n✅ AutoML Pipeline completed successfully.")
     print(f"All trained models saved in: {results_dir}\n")
+    #return compute_model_scores(results)
 
-    return compute_model_scores(results)
+    with open(f'main/processed_data/{dataset_name}/metadata.json', "r") as f:
+        meta_data = json.load(f)
+    feature_names = meta_data["numeric_cols"]
+    st,model_data= compute_model_scores(results)
+    # Extract coefficients and intercept
+    coef = model_data["coef"]
+    intercept = model_data["intercept"]
+
+    # Build final mapping
+    final_map = {feature_names[i]: coef[i] for i in range(len(feature_names))}
+    final_map["intercept"] = intercept
+
+    return final_map
+
 
 
 def main():

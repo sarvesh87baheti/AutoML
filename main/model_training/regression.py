@@ -49,6 +49,51 @@ class RegressionTrainer:
         models = self._load_models()
         results = {}
 
+        def _extract_weights(pipe):
+            """Try to extract model weights from a fitted pipeline or estimator.
+
+            Returns a dict (e.g. {'coef': [...], 'intercept': ...}) or None if
+            weights can't be determined.
+            """
+            try:
+                from sklearn.pipeline import Pipeline
+            except Exception:
+                Pipeline = None
+
+            est = pipe
+            try:
+                if Pipeline is not None and isinstance(pipe, Pipeline):
+                    est = pipe.steps[-1][1]
+            except Exception:
+                est = pipe
+
+            weights = None
+            try:
+                if hasattr(est, "coef_"):
+                    coef = getattr(est, "coef_")
+                    intercept = getattr(est, "intercept_", None)
+                    try:
+                        coef = coef.tolist()
+                    except Exception:
+                        pass
+                    try:
+                        if intercept is not None:
+                            intercept = float(intercept)
+                    except Exception:
+                        pass
+                    weights = {"coef": coef, "intercept": intercept}
+                elif hasattr(est, "feature_importances_"):
+                    fi = getattr(est, "feature_importances_")
+                    try:
+                        fi = fi.tolist()
+                    except Exception:
+                        pass
+                    weights = {"feature_importances": fi}
+            except Exception:
+                weights = None
+
+            return weights
+
         for ModelClass in models:
             model_name = ModelClass.MODEL_NAME
             save_path = self.output_path / f"{model_name}.joblib"
@@ -61,10 +106,12 @@ class RegressionTrainer:
                 y_val=y_val,
                 save_path=save_path
             )
+            weights = _extract_weights(pipe)
 
             results[model_name] = {
                 "metrics": metrics,
-                "metadata": metadata
+                "metadata": metadata,
+                "weights": weights
             }
 
         return results

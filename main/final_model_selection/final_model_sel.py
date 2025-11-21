@@ -23,4 +23,7 @@ def compute_model_scores(results):
         model_scores[model_name] = score
 
     best_model = max(model_scores, key=model_scores.get)
-    return model_scores, best_model
+    # Extract best model’s weights from results JSON
+    best_model_weights = results[best_model].get("weights", None)
+    # model_Scores
+    return best_model, best_model_weights
