@@ -1,0 +1,43 @@
+{
+    "problem_type": "regression",
+    "target": "Life expectancy ",
+    "n_features": 17,
+    "train_samples": 500,
+    "val_samples": 126,
+    "feature_matrix_format": "dense_npy",
+    "categorical_cols": [
+        "Status"
+    ],
+    "text_cols": [
+        "Country"
+    ],
+    "numeric_cols": [
+        "Year",
+        "Adult Mortality",
+        "infant deaths",
+        "Alcohol",
+        "percentage expenditure",
+        "Hepatitis B",
+        "Measles ",
+        " BMI ",
+        "under-five deaths ",
+        "Polio",
+        "Total expenditure",
+        "Diphtheria ",
+        " HIV/AIDS",
+        "GDP",
+        "Population",
+        " thinness  1-19 years",
+        " thinness 5-9 years",
+        "Income composition of resources",
+        "Schooling"
+    ],
+    "encoders": [
+        "Status"
+    ],
+    "vectorizers": [
+        "Country"
+    ],
+    "scaler_present": true,
+    "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
+}

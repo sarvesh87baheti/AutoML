@@ -106,12 +106,22 @@ class RegressionTrainer:
                 y_val=y_val,
                 save_path=save_path
             )
-            weights = _extract_weights(pipe)
+
+            # Include validation predictions for visualization (Actual vs Predicted)
+            try:
+                val_preds = pipe.predict(X_val)
+                # Convert to list to ensure JSON serializable
+                val_preds = val_preds.tolist()
+                val_actual = y_val.tolist()
+            except Exception:
+                val_preds = None
+                val_actual = None
 
             results[model_name] = {
                 "metrics": metrics,
                 "metadata": metadata,
-                "weights": weights
+                "val_predictions": val_preds,
+                "val_actual": val_actual
             }
 
         return results

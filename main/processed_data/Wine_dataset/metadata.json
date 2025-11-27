@@ -1,0 +1,31 @@
+{
+    "problem_type": "classification",
+    "target": "class",
+    "n_features": 10,
+    "train_samples": 128,
+    "val_samples": 33,
+    "feature_matrix_format": "dense_npy",
+    "categorical_cols": [],
+    "text_cols": [],
+    "numeric_cols": [
+        "Alcohol",
+        "Malic acid",
+        "Ash",
+        "Alcalinity of ash",
+        "Magnesium",
+        "Total phenols",
+        "Flavanoids",
+        "Nonflavanoid phenols",
+        "Proanthocyanins",
+        "Color intensity",
+        "Hue",
+        "OD280/OD315 of diluted wines",
+        "Proline "
+    ],
+    "encoders": [
+        "target"
+    ],
+    "vectorizers": [],
+    "scaler_present": true,
+    "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
+}

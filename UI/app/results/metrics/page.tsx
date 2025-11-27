@@ -1,9 +1,6 @@
-// FILE PURPOSE: Model Metrics & Evaluation Page - Display comprehensive performance charts
-// Shows: Accuracy, Precision, Recall, F1-Score, Confusion Matrix, ROC Curve, etc.
-// BACKEND INTEGRATION: Fetch metrics data from trained model
-
 "use client"
 
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,237 +16,232 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  ScatterChart,
+  Scatter,
 } from "recharts"
 
-// SAMPLE DATA - Replace with real metrics from backend API
-const accuracyData = [
-  { name: "Random Forest", value: 0.92 },
-  { name: "Gradient Boost", value: 0.89 },
-  { name: "SVM", value: 0.85 },
-  { name: "Logistic Reg", value: 0.82 },
-]
-
-const precisionRecallData = [
-  { model: "Random Forest", precision: 0.91, recall: 0.93 },
-  { model: "Gradient Boost", precision: 0.88, recall: 0.9 },
-  { model: "SVM", precision: 0.84, recall: 0.86 },
-]
-
-const confusionMatrixData = [
-  { name: "True Neg", value: 850, fill: "#10b981" },
-  { name: "False Pos", value: 50, fill: "#f59e0b" },
-  { name: "False Neg", value: 40, fill: "#f97316" },
-  { name: "True Pos", value: 60, fill: "#3b82f6" },
-]
-
-const handleExportReport = () => {
-  const reportData = {
-    timestamp: new Date().toISOString(),
-    bestModel: "Random Forest",
-    accuracy: "92%",
-    trainingTime: "2m 34s",
-    modelsCount: 4,
-    accuracyData,
-    precisionRecallData,
-    confusionMatrix: confusionMatrixData,
-  }
-  const dataStr = JSON.stringify(reportData, null, 2)
-  const dataBlob = new Blob([dataStr], { type: "application/json" })
-  const url = URL.createObjectURL(dataBlob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = `easyflow-metrics-report-${Date.now()}.json`
-  link.click()
-  URL.revokeObjectURL(url)
+// ---- Fetch Latest Results ----
+type ResultsPayload = {
+  dataset: string
+  problem_type?: string
+  results: Record<string, any>
 }
 
-const handleShare = () => {
-  const shareText = `I trained 4 ML models with EasyFlow ML! Best Model: Random Forest with 92% accuracy. Try it yourself at ${window.location.origin}`
-  if (navigator.share) {
-    navigator.share({
-      title: "EasyFlow ML Results",
-      text: shareText,
-    })
-  } else {
-    navigator.clipboard.writeText(shareText)
-    alert("Results copied to clipboard!")
-  }
+function useLatestResults() {
+  const [data, setData] = useState<ResultsPayload | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch("/api/results", { cache: "no-store" })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json?.error || "Failed to fetch results")
+        if (mounted) setData(json)
+      } catch (e: any) {
+        if (mounted) setError(e?.message)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  return { data, loading, error }
 }
 
 export default function MetricsPage() {
+  const { data, loading, error } = useLatestResults()
+
+  // ---- Computed values with hooks BEFORE render return ----
+
+  const modelMetrics = useMemo(() => {
+    const arr: { name: string; metrics: any }[] = []
+    const r = data?.results || {}
+    for (const [name, value] of Object.entries<any>(r)) {
+      const m = value?.metrics?.val || value?.metrics?.train
+      if (m) arr.push({ name, metrics: m })
+    }
+    return arr
+  }, [data])
+
+  const accuracyData = useMemo(() => {
+    if (!modelMetrics.length) return []
+    const isRegression = data?.problem_type === "regression"
+    return modelMetrics
+      .map(({ name, metrics }) => ({
+        name,
+        value: isRegression ? metrics.r2 : metrics.accuracy,
+      }))
+      .filter((d) => typeof d.value === "number")
+      .sort((a, b) => b.value - a.value)
+  }, [modelMetrics, data?.problem_type])
+
+  const bestModelName = useMemo(
+    () => accuracyData[0]?.name ?? "N/A",
+    [accuracyData]
+  )
+
+  const avgMetric = useMemo(
+    () => (accuracyData.length ? accuracyData.reduce((s, m) => s + m.value, 0) / accuracyData.length : 0),
+    [accuracyData]
+  )
+
+  const regressionSeries = useMemo(() => {
+    if (data?.problem_type !== "regression") return []
+    const best = data?.results?.[bestModelName]
+    const preds = best?.val_predictions
+    const actual = best?.val_actual
+    if (!preds || !actual) return []
+    const out: any[] = []
+    for (let i = 0; i < Math.min(preds.length, actual.length); i++) {
+      out.push({ index: i, actual: actual[i], predicted: preds[i] })
+    }
+    return out
+  }, [data?.results, bestModelName])
+
+  const handleShare = () => {
+    const text = `I trained models using EasyFlow ML! Best model: ${bestModelName}`
+    navigator.clipboard.writeText(text)
+    alert("Link copied to clipboard!")
+  }
+
+  const handleExportReport = () => {
+    const blob = new Blob([JSON.stringify({ dataset: data?.dataset, bestModelName, accuracyData }, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `easyflow-report-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ---- UI Return ----
+  if (loading) return <p className="text-center mt-10 text-muted-foreground">Loading results...</p>
+  if (error) return <p className="text-center mt-10 text-red-500">{error}</p>
+
   return (
-    <div className="container py-12 bg-gradient-to-b from-background to-background">
+    <div className="container py-12">
       <div className="mx-auto max-w-6xl space-y-8">
-        {/* PAGE HEADER WITH BACK BUTTON */}
+        
+        {/* HEADER */}
         <div className="flex items-center justify-between">
-          <div>
-            <Link href="/build">
-              <Button variant="outline" size="sm" className="mb-4 bg-transparent">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Build
-              </Button>
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tighter text-foreground">Model Performance Metrics</h1>
-            <p className="text-muted-foreground mt-2">
-              Comprehensive evaluation of all trained models with detailed performance comparisons
-            </p>
-          </div>
+          <Link href="/build">
+            <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Build
+            </Button>
+          </Link>
+
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportReport}>
-              <Download className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={handleExportReport}>
+              <Download className="mr-2 h-4 w-4" />
               Export Report
             </Button>
-            <Button variant="outline" size="sm" onClick={handleShare}>
-              <Share2 className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={handleShare}>
+              <Share2 className="mr-2 h-4 w-4" />
               Share
             </Button>
           </div>
         </div>
 
-        {/* GRID OF METRICS CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <h1 className="text-3xl font-bold">Model Performance Metrics</h1>
+        <p className="text-muted-foreground">Evaluation of all trained models with comparison charts</p>
+
+        {/* SUMMARY CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-foreground">Best Model</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-foreground">Random Forest</p>
-              <p className="text-xs text-muted-foreground mt-1">92% Accuracy</p>
-            </CardContent>
+            <CardHeader><CardTitle>Best Model</CardTitle></CardHeader>
+            <CardContent><p className="text-2xl font-bold">{bestModelName}</p></CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-foreground">Avg Accuracy</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-foreground">87%</p>
-              <p className="text-xs text-muted-foreground mt-1">Across all models</p>
-            </CardContent>
+            <CardHeader><CardTitle>{data?.problem_type === "regression" ? "Avg R²" : "Avg Accuracy"}</CardTitle></CardHeader>
+            <CardContent><p className="text-2xl font-bold">{avgMetric.toFixed(3)}</p></CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-foreground">Training Time</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-foreground">2m 34s</p>
-              <p className="text-xs text-muted-foreground mt-1">For all models</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-foreground">Models Trained</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-foreground">4</p>
-              <p className="text-xs text-muted-foreground mt-1">Different algorithms</p>
-            </CardContent>
+            <CardHeader><CardTitle>Models Trained</CardTitle></CardHeader>
+            <CardContent><p className="text-2xl font-bold">{modelMetrics.length}</p></CardContent>
           </Card>
         </div>
 
-        {/* CHART 1: MODEL ACCURACY COMPARISON */}
+        {/* BAR CHART: ACCURACY / R2 */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground">Model Accuracy Comparison</CardTitle>
-            <CardDescription>Performance ranking of all trained models</CardDescription>
+            <CardTitle>{data?.problem_type === "regression" ? "Model R² Comparison" : "Model Accuracy Comparison"}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={accuracyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--muted)" />
-                <XAxis dataKey="name" stroke="var(--foreground)" />
-                <YAxis stroke="var(--foreground)" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--card)",
-                    border: "1px solid var(--border)",
-                    color: "var(--foreground)",
-                  }}
-                />
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
                 <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* CHART 2: PRECISION & RECALL */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-foreground">Precision & Recall Analysis</CardTitle>
-            <CardDescription>Trade-off between true positives and false positives</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={precisionRecallData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--muted)" />
-                <XAxis dataKey="model" stroke="var(--foreground)" />
-                <YAxis stroke="var(--foreground)" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--card)",
-                    border: "1px solid var(--border)",
-                    color: "var(--foreground)",
-                  }}
-                />
-                <Legend wrapperStyle={{ color: "var(--foreground)" }} />
-                <Line type="monotone" dataKey="precision" stroke="#3b82f6" strokeWidth={2} />
-                <Line type="monotone" dataKey="recall" stroke="#10b981" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* CHART 3: CONFUSION MATRIX */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-foreground">Confusion Matrix (Best Model)</CardTitle>
-            <CardDescription>Distribution of predictions vs actual values</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center">
+        {/* LINES CHART: Actual vs Predicted */}
+        {data?.problem_type === "regression" && (
+          <Card>
+            <CardHeader><CardTitle>Actual vs Predicted (Validation)</CardTitle></CardHeader>
+            <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={confusionMatrixData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {confusionMatrixData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--card)",
-                      border: "1px solid var(--border)",
-                      color: "var(--foreground)",
-                    }}
-                  />
-                </PieChart>
+                <LineChart data={regressionSeries}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="index" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="actual" stroke="#0ea5e9" strokeWidth={2} />
+                  <Line type="monotone" dataKey="predicted" stroke="#22c55e" strokeWidth={2} />
+                </LineChart>
               </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* ACTION BUTTONS */}
-        <div className="flex gap-4 justify-between">
+        {/* CHART: Precision & Recall Comparison (Classification Only) */}
+        {data?.problem_type === "classification" && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Precision & Recall Comparison</CardTitle>
+      <CardDescription>Trade-offs between true positives and false positives</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={modelMetrics.map(({ name, metrics }) => ({
+          model: name,
+          precision: metrics?.precision,
+          recall: metrics?.recall,
+        }))}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="model" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="precision" stroke="#3b82f6" strokeWidth={2} />
+          <Line type="monotone" dataKey="recall" stroke="#10b981" strokeWidth={2} />
+        </LineChart>
+      </ResponsiveContainer>
+    </CardContent>
+  </Card>
+        )}
+
+        {/* NAVIGATION */}
+        <div className="flex justify-between">
           <Link href="/build">
-            <Button variant="outline">Build Another Model</Button>
+            <Button variant="outline">Train Another Model</Button>
           </Link>
           <Link href="/results/predictions">
-            <Button className="bg-gradient-to-r from-violet-600 via-blue-500 to-teal-400 hover:from-violet-700 hover:via-blue-600 hover:to-teal-500 text-white font-semibold">
-              Make Predictions
-            </Button>
+            <Button>Make Predictions</Button>
           </Link>
         </div>
       </div>

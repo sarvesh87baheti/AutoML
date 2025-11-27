@@ -101,7 +101,7 @@ def process_features(
     if task_type == "classification" and y is not None:
         le_target = LabelEncoder()
         y_final = le_target.fit_transform(y.astype(str))
-        encoders["target"] = dict(zip(le_target.classes, le_target.transform(le_target.classes)))
+        encoders["target"] = dict(zip(le_target.classes_, le_target.transform(le_target.classes_)))
     elif task_type == "regression" and y is not None:
         y_final = y.astype(float).to_numpy()
     else:

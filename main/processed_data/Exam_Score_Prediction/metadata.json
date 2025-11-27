@@ -1,0 +1,38 @@
+{
+    "problem_type": "classification",
+    "target": "exam_score",
+    "n_features": 11,
+    "train_samples": 16000,
+    "val_samples": 4000,
+    "feature_matrix_format": "dense_npy",
+    "categorical_cols": [
+        "gender",
+        "course",
+        "internet_access",
+        "sleep_quality",
+        "study_method",
+        "facility_rating",
+        "exam_difficulty"
+    ],
+    "text_cols": [],
+    "numeric_cols": [
+        "student_id",
+        "age",
+        "study_hours",
+        "class_attendance",
+        "sleep_hours"
+    ],
+    "encoders": [
+        "gender",
+        "course",
+        "internet_access",
+        "sleep_quality",
+        "study_method",
+        "facility_rating",
+        "exam_difficulty",
+        "target"
+    ],
+    "vectorizers": [],
+    "scaler_present": true,
+    "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
+}

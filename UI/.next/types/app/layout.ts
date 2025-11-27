@@ -1,4 +1,4 @@
-// File: /home/anzzh/Documents/acad 7th sem/bpt_git/AutoML/UI/app/layout.tsx
+// File: C:\Users\sarve\Desktop\BTP\AutoML\UI\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

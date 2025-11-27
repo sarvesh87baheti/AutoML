@@ -1,18 +1,30 @@
 def score_model(metrics, weights=None):
-    if weights is None:
-        weights = {"mse": 0.1, "rmse": 0.3, "mae": 0.2, "r2": 0.4}
+    # Regression scoring
+    if "mse" in metrics.get("val", {}):
+        if weights is None:
+            weights = {"mse": 0.1, "rmse": 0.3, "mae": 0.2, "r2": 0.4}
 
-    mse = metrics["val"]["mse"]
-    rmse = metrics["val"]["rmse"]
-    mae = metrics["val"]["mae"]
-    r2 = metrics["val"]["r2"]
+        mse = metrics["val"].get("mse", 1e9)
+        rmse = metrics["val"].get("rmse", 1e9)
+        mae = metrics["val"].get("mae", 1e9)
+        r2 = metrics["val"].get("r2", 0)
 
-    score = (
-        weights["mse"] * (1 / mse) +
-        weights["rmse"] * (1 / rmse) +
-        weights["mae"] * (1 / mae) +
-        weights["r2"] * (r2)
-    )
+        score = (
+            weights["mse"] * (1 / mse) +
+            weights["rmse"] * (1 / rmse) +
+            weights["mae"] * (1 / mae) +
+            weights["r2"] * r2
+        )
+        return score
+
+    # Classification scoring
+    accuracy = metrics["val"].get("accuracy", 0)
+    precision = metrics["val"].get("precision", 0)
+    recall = metrics["val"].get("recall", 0)
+    f1 = metrics["val"].get("f1", 0)
+
+    # Weighted scoring for classification
+    score = (0.5 * f1) + (0.3 * accuracy) + (0.1 * precision) + (0.1 * recall)
     return score
 
 

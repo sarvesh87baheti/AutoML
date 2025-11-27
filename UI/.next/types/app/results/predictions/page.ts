@@ -1,4 +1,4 @@
-// File: /home/anzzh/Documents/acad 7th sem/bpt_git/AutoML/UI/app/results/predictions/page.tsx
+// File: C:\Users\sarve\Desktop\BTP\AutoML\UI\app\results\predictions\page.tsx
 import * as entry from '../../../../../app/results/predictions/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
