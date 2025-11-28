@@ -1,4 +1,4 @@
-// File: C:\Users\sarve\Desktop\BTP\AutoML\UI\app\page.tsx
+// File: C:\Users\sri dattu\AutoML-1\UI\app\page.tsx
 import * as entry from '../../../app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

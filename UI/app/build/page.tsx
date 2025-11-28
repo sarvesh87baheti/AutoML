@@ -283,11 +283,11 @@ export default function BuildPage() {
                     <BarChart3 className="mr-2" /> View Metric Charts
                   </Button>
                 </Link>
-                <Link href="/results/predictions">
+                {/* <Link href="/results/predictions">
                   <Button className="w-full" variant="outline">
                     <Wand2 className="mr-2" /> Make Predictions
                   </Button>
-                </Link>
+                </Link> */}
               </div>
             </CardContent>
           </Card>

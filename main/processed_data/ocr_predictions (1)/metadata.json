@@ -1,0 +1,19 @@
+{
+    "problem_type": "clustering",
+    "n_features": 2,
+    "samples": 96,
+    "feature_matrix_format": "dense_npy",
+    "categorical_cols": [
+        "prediction"
+    ],
+    "text_cols": [],
+    "numeric_cols": [
+        "index"
+    ],
+    "encoders": [
+        "prediction"
+    ],
+    "vectorizers": [],
+    "scaler_present": true,
+    "notes": "Clustering mode: no y saved."
+}
