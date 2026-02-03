@@ -108,14 +108,6 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     results["best_model"] = best_model
     results["model_scores"] = scores
 
-    # Save summary JSON
-    summary_path = results_dir / "training_summary.json"
-    with open(summary_path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    print(f"📄 Summary saved: {summary_path}")
-    print("\n🎉 AutoML Pipeline completed.\n")
-
     # -------------------------------------------------------
     # 6) FEATURE IMPORTANCE EXTRACTION
     # -------------------------------------------------------
@@ -148,6 +140,14 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
                 meta.get("problem_type", ""),
             )
             results["feature_importance"] = priorities
+
+    # Save summary JSON (after feature importance enrichment)
+    summary_path = results_dir / "training_summary.json"
+    with open(summary_path, "w") as f:
+        json.dump(results, f, indent=4)
+
+    print(f"📄 Summary saved: {summary_path}")
+    print("\n🎉 AutoML Pipeline completed.\n")
 
     return results
 
