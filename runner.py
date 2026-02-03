@@ -150,7 +150,7 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
                     else:
                         logger.error(
                             f"Validation feature matrix not found in '{processed_dir}'. "
-                            f"Expected one of: '{x_val_sparse_path.name}' or '{x_val_path.name}'."
+                            f"Expected 'X_val.npz' (sparse) or 'X_val.npy' (dense)."
                         )
                         X_val = None
                     

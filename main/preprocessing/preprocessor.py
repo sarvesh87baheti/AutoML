@@ -180,7 +180,7 @@ def process_features(
                 "encoders": list(encoders.keys()),
                 "vectorizers": [],
                 "scaler_present": scaler is not None,
-                "notes": "Clustering mode: feature matrix saved without target variable; no text vectorization artifacts are stored."
+                "notes": "Clustering mode: feature matrix saved without target variable."
             }
 
             with open(save_path / "metadata.json", "w") as f:

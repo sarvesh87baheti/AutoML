@@ -24,10 +24,9 @@ def _normalize_importances(importances: np.ndarray) -> np.ndarray:
     if importances.ndim != 1:
         importances = importances.ravel()
     total = float(np.sum(importances))
-    if total < 0:
-        logger.warning("Sum of importances is negative, which is unexpected. Returning zeros.")
-        return np.zeros_like(importances, dtype=float)
-    if total == 0:
+    if total <= 0:
+        if total < 0:
+            logger.warning("Sum of importances is negative, which is unexpected. Returning zeros.")
         return np.zeros_like(importances, dtype=float)
     return (importances / total) * 100.0
 
