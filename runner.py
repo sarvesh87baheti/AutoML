@@ -19,6 +19,7 @@ if str(ROOT.parent) not in sys.path:
 from main.preprocessing.datacleaning import clean_dataframe
 from main.preprocessing.preprocessor import process_features
 from main.model_training.orchestrator import Orchestrator
+from main.model_training.feature_importance import compute_feature_priorities
 from main.final_model_selection.final_model_sel import compute_model_scores
 
 
@@ -77,7 +78,12 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     # -------------------------------------------------------
     processed_dir = project_root / "processed_data" / dataset_name
     print("⚙️ Preprocessing features...")
-    process_features(df, target_col=target_col, save_dir=str(processed_dir))
+    process_features(
+        df,
+        target_col=target_col,
+        save_dir=str(processed_dir),
+        apply_pca=False,
+    )
     print(f"✅ Processed data saved at: {processed_dir}")
 
     # -------------------------------------------------------
@@ -111,35 +117,37 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     print("\n🎉 AutoML Pipeline completed.\n")
 
     # -------------------------------------------------------
-    # 6) SAFE COEFFICIENT EXTRACTION (Regression only)
+    # 6) FEATURE IMPORTANCE EXTRACTION
     # -------------------------------------------------------
     meta_file = processed_dir / "metadata.json"
     if meta_file.exists():
         with open(meta_file, "r") as f:
             meta = json.load(f)
 
-        if meta.get("problem_type") == "regression":
-            feature_names = meta.get("numeric_cols", [])
+        feature_names = meta.get("feature_names", [])
+        model_path = results_dir / f"{best_model}.joblib"
+        x_val_path = processed_dir / "X_val.npy"
+        x_val_sparse_path = processed_dir / "X_val.npz"
+        y_val_path = processed_dir / "y_val.npy"
 
-            model_path = results_dir / f"{best_model}.joblib"
-            if model_path.exists():
-                pipe = joblib.load(model_path)
-                est = getattr(pipe, "named_steps", {}).get("est", pipe)
+        if model_path.exists() and y_val_path.exists():
+            if x_val_sparse_path.exists():
+                from scipy.sparse import load_npz
 
-                coef = getattr(est, "coef_", None)
-                intercept = getattr(est, "intercept_", None)
+                X_val = load_npz(x_val_sparse_path)
+            else:
+                X_val = np.load(x_val_path)
+            y_val = np.load(y_val_path)
 
-                if coef is not None:
-                    coef = np.asarray(coef)
-                    if coef.ndim > 1:
-                        coef = coef[0]
-
-                    if len(coef) != len(feature_names):
-                        feature_names = [f"feature_{i}" for i in range(len(coef))]
-
-                    coef_map = {feature_names[i]: float(coef[i]) for i in range(len(coef))}
-                    coef_map["intercept"] = float(intercept) if intercept is not None else 0.0
-                    results["coefficients"] = coef_map
+            pipe = joblib.load(model_path)
+            priorities = compute_feature_priorities(
+                pipe,
+                X_val,
+                y_val,
+                feature_names,
+                meta.get("problem_type", ""),
+            )
+            results["feature_importance"] = priorities
 
     return results
 

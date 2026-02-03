@@ -5,9 +5,8 @@ import os
 from pathlib import Path
 from .datacleaning import clean_dataframe
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-from scipy.sparse import hstack, issparse, save_npz
+from scipy.sparse import issparse, save_npz
 from typing import Optional
 from .EDA import perform_eda, plot_correlation_heatmap, pca_reduction
 
@@ -32,6 +31,8 @@ def process_features(
     save_dir: Optional[str] = None,
     test_size: float = 0.2,
     random_state: int = 42,
+    apply_pca: bool = True,
+    pca_variance: float = 0.95,
 ):
     """
     Process features for ML tasks and optionally save train/val arrays + metadata.
@@ -39,7 +40,6 @@ def process_features(
     Minimal return (per request): returns only X, y, and task_type.
     """
     encoders = {}
-    vectorizers = {}
 
     # --- Handle target variable ---
     if target_col and target_col not in cleaned_df.columns:
@@ -57,31 +57,17 @@ def process_features(
     # --- Detect column types ---
     numeric_cols = X_df.select_dtypes(include=np.number).columns
     categorical_cols = []
-    text_cols = []
 
     for col in X_df.select_dtypes(include=["object", "category"]).columns:
         n_unique = X_df[col].nunique()
         if n_unique < 50:  # treat as categorical
             categorical_cols.append(col)
-        else:  # treat as free text
-            text_cols.append(col)
 
     # --- Encode categorical features ---
     for col in categorical_cols:
         le = LabelEncoder()
         X_df[col] = le.fit_transform(X_df[col].astype(str))
         encoders[col] = dict(zip(le.classes_, le.transform(le.classes_)))
-
-    # --- Vectorize text features ---
-    text_features = []
-    text_feature_names = []
-    for col in text_cols:
-        vectorizer = TfidfVectorizer(max_features=500)
-        text_matrix = vectorizer.fit_transform(X_df[col].astype(str).fillna(""))
-        text_features.append(text_matrix)
-        text_feature_names.append(col)
-        vectorizers[col] = vectorizer
-        X_df = X_df.drop(columns=[col])
 
     # --- Scale numeric features ---
     scaler = StandardScaler()
@@ -90,12 +76,9 @@ def process_features(
     else:
         scaler = None
 
-    # --- Combine numeric + categorical + text ---
-    X_numeric = X_df.to_numpy()
-    if text_features:
-        X_final = hstack([X_numeric] + text_features)
-    else:
-        X_final = X_numeric
+    # --- Combine numeric + categorical ---
+    X_final = X_df.to_numpy()
+    feature_names = list(X_df.columns)
 
     # --- Encode target if classification ---
     if task_type == "classification" and y is not None:
@@ -107,8 +90,11 @@ def process_features(
     else:
         y_final = None
     
-    eda_result = perform_eda(X_final, corr_threshold=0.9, pca_variance=0.95)
-    X_final=eda_result["X_reduced"]
+    if apply_pca:
+        eda_result = perform_eda(X_final, corr_threshold=0.9, pca_variance=pca_variance)
+        X_final = eda_result["X_reduced"]
+    else:
+        eda_result = {"removed_corr_columns": [], "pca_model": None}
     # --- Optionally save train/val arrays + metadata ---
 
     if save_dir:
@@ -144,10 +130,13 @@ def process_features(
                 "val_samples": int(x_val_shape[0]),
                 "feature_matrix_format": x_format,
                 "categorical_cols": list(categorical_cols),
-                "text_cols": list(text_feature_names),
+                "text_cols": [],
+                "text_feature_names": [],
                 "numeric_cols": list(numeric_cols),
+                "feature_names": feature_names,
+                "pca_applied": bool(apply_pca),
                 "encoders": list(encoders.keys()),
-                "vectorizers": list(vectorizers.keys()),
+                "vectorizers": [],
                 "scaler_present": scaler is not None,
                 "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
             }
@@ -173,10 +162,13 @@ def process_features(
                 "samples": int(x_shape[0]),
                 "feature_matrix_format": x_format,
                 "categorical_cols": list(categorical_cols),
-                "text_cols": list(text_feature_names),
+                "text_cols": [],
+                "text_feature_names": [],
                 "numeric_cols": list(numeric_cols),
+                "feature_names": feature_names,
+                "pca_applied": bool(apply_pca),
                 "encoders": list(encoders.keys()),
-                "vectorizers": list(vectorizers.keys()),
+                "vectorizers": [],
                 "scaler_present": scaler is not None,
                 "notes": "Clustering mode: no y saved."
             }
