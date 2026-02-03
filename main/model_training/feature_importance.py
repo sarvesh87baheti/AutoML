@@ -69,8 +69,10 @@ def compute_feature_priorities(
                     random_state=42,
                     scoring=scoring,
                 )
-                # Clip negative values (features that hurt performance) to zero
-                # so normalized percentages remain meaningful
+                # Permutation importance can produce negative values when permuting a feature
+                # decreases model performance (i.e., the feature hurts the model).
+                # For the purpose of normalized percentage display, we clip negative values to zero
+                # so that only positive contributions are reflected in the importance distribution.
                 signed_importances = np.asarray(result.importances_mean, dtype=float).ravel()
                 importances = np.clip(signed_importances, a_min=0.0, a_max=None)
             except Exception as e:

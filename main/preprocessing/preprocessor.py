@@ -103,9 +103,8 @@ def process_features(
     if apply_pca:
         eda_result = perform_eda(X_final, corr_threshold=0.9, pca_variance=pca_variance)
         X_final = eda_result["X_reduced"]
-        # Update feature names to reflect PCA components
-        if X_final.shape[1] != len(feature_names):
-            feature_names = [f"PC{i+1}" for i in range(X_final.shape[1])]
+        # PCA changes feature dimensions, so replace feature names with component names
+        feature_names = [f"PC{i+1}" for i in range(X_final.shape[1])]
     else:
         eda_result = {"removed_corr_columns": [], "pca_model": None}
     # --- Optionally save train/val arrays + metadata ---
