@@ -2,6 +2,7 @@
 import argparse
 import json
 import io
+import logging
 from contextlib import redirect_stdout
 import pandas as pd
 from pathlib import Path
@@ -9,6 +10,9 @@ import zipfile
 import sys, os
 import joblib
 import numpy as np
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 
 # Make project importable regardless of run context
 ROOT = Path(__file__).resolve().parent
@@ -19,6 +23,7 @@ if str(ROOT.parent) not in sys.path:
 from main.preprocessing.datacleaning import clean_dataframe
 from main.preprocessing.preprocessor import process_features
 from main.model_training.orchestrator import Orchestrator
+from main.model_training.feature_importance import compute_feature_priorities
 from main.final_model_selection.final_model_sel import compute_model_scores
 
 
@@ -77,7 +82,12 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     # -------------------------------------------------------
     processed_dir = project_root / "processed_data" / dataset_name
     print("⚙️ Preprocessing features...")
-    process_features(df, target_col=target_col, save_dir=str(processed_dir))
+    process_features(
+        df,
+        target_col=target_col,
+        save_dir=str(processed_dir),
+        apply_pca=False,
+    )
     print(f"✅ Processed data saved at: {processed_dir}")
 
     # -------------------------------------------------------
@@ -102,44 +112,71 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     results["best_model"] = best_model
     results["model_scores"] = scores
 
-    # Save summary JSON
-    summary_path = results_dir / "training_summary.json"
-    with open(summary_path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    print(f"📄 Summary saved: {summary_path}")
-    print("\n🎉 AutoML Pipeline completed.\n")
-
     # -------------------------------------------------------
-    # 6) SAFE COEFFICIENT EXTRACTION (Regression only)
+    # 6) FEATURE IMPORTANCE EXTRACTION
     # -------------------------------------------------------
     meta_file = processed_dir / "metadata.json"
     if meta_file.exists():
         with open(meta_file, "r") as f:
             meta = json.load(f)
 
-        if meta.get("problem_type") == "regression":
-            feature_names = meta.get("numeric_cols", [])
+        problem_type = meta.get("problem_type", "")
+        
+        # Skip feature importance for clustering tasks
+        if problem_type == "clustering":
+            logger.info("Skipping feature importance extraction for clustering task.")
+        else:
+            feature_names = meta.get("feature_names", [])
+            
+            # Verify PCA was not applied (to ensure feature names match model features)
+            if meta.get("pca_applied", False):
+                logger.warning(
+                    "PCA was applied during preprocessing. Feature importance may not be meaningful "
+                    "for PCA-transformed features. Skipping feature importance extraction."
+                )
+            else:
+                model_path = results_dir / f"{best_model}.joblib"
+                x_val_path = processed_dir / "X_val.npy"
+                x_val_sparse_path = processed_dir / "X_val.npz"
+                y_val_path = processed_dir / "y_val.npy"
 
-            model_path = results_dir / f"{best_model}.joblib"
-            if model_path.exists():
-                pipe = joblib.load(model_path)
-                est = getattr(pipe, "named_steps", {}).get("est", pipe)
+                if model_path.exists() and y_val_path.exists():
+                    # Load validation features (sparse or dense)
+                    if x_val_sparse_path.exists():
+                        from scipy.sparse import load_npz
+                        X_val = load_npz(x_val_sparse_path)
+                    elif x_val_path.exists():
+                        X_val = np.load(x_val_path)
+                    else:
+                        logger.error(
+                            f"Validation feature matrix not found in '{processed_dir}'. "
+                            f"Expected 'X_val.npz' (sparse) or 'X_val.npy' (dense)."
+                        )
+                        X_val = None
+                    
+                    if X_val is not None:
+                        y_val = np.load(y_val_path)
+                        pipe = joblib.load(model_path)
+                        priorities = compute_feature_priorities(
+                            pipe,
+                            X_val,
+                            y_val,
+                            feature_names,
+                            problem_type,
+                        )
+                        results["feature_importance"] = priorities
+                else:
+                    logger.warning(
+                        f"Model or validation data not found. Skipping feature importance extraction."
+                    )
 
-                coef = getattr(est, "coef_", None)
-                intercept = getattr(est, "intercept_", None)
+    # Save summary JSON (after feature importance enrichment)
+    summary_path = results_dir / "training_summary.json"
+    with open(summary_path, "w") as f:
+        json.dump(results, f, indent=4)
 
-                if coef is not None:
-                    coef = np.asarray(coef)
-                    if coef.ndim > 1:
-                        coef = coef[0]
-
-                    if len(coef) != len(feature_names):
-                        feature_names = [f"feature_{i}" for i in range(len(coef))]
-
-                    coef_map = {feature_names[i]: float(coef[i]) for i in range(len(coef))}
-                    coef_map["intercept"] = float(intercept) if intercept is not None else 0.0
-                    results["coefficients"] = coef_map
+    print(f"📄 Summary saved: {summary_path}")
+    print("\n🎉 AutoML Pipeline completed.\n")
 
     return results
 

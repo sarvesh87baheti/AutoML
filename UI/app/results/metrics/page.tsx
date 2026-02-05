@@ -91,6 +91,19 @@ export default function MetricsPage() {
     [accuracyData]
   )
 
+  const featureImportance = useMemo(() => {
+    const raw = data?.results?.feature_importance
+    if (!Array.isArray(raw)) return []
+    return raw
+      .filter(
+        (item) =>
+          typeof item?.percentage === "number" &&
+          typeof item?.feature === "string" &&
+          item.feature.length > 0
+      )
+      .slice(0, 10)
+  }, [data?.results])
+
   const regressionSeries = useMemo(() => {
     if (data?.problem_type !== "regression") return []
     const best = data?.results?.[bestModelName]
@@ -233,6 +246,27 @@ export default function MetricsPage() {
       </ResponsiveContainer>
     </CardContent>
   </Card>
+        )}
+
+        {/* FEATURE IMPORTANCE */}
+        {featureImportance.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Feature Importance</CardTitle>
+              <CardDescription>Most influential columns by relative importance (% of total)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={featureImportance} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, "dataMax"]} tickFormatter={(value) => `${value}%`} />
+                  <YAxis type="category" dataKey="feature" width={140} />
+                  <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
+                  <Bar dataKey="percentage" fill="#f97316" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         )}
 
         {/* NAVIGATION */}

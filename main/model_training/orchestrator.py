@@ -7,9 +7,19 @@ from .regression import RegressionTrainer
 from .classification import ClassificationTrainer
 
 def load_processed_dataset(path: Path):
-    X_train = np.load(path / "X_train.npy")
+    x_train_npz = path / "X_train.npz"
+    x_val_npz = path / "X_val.npz"
+
+    if x_train_npz.exists() and x_val_npz.exists():
+        from scipy.sparse import load_npz
+
+        X_train = load_npz(x_train_npz)
+        X_val = load_npz(x_val_npz)
+    else:
+        X_train = np.load(path / "X_train.npy")
+        X_val = np.load(path / "X_val.npy")
+
     y_train = np.load(path / "y_train.npy")
-    X_val = np.load(path / "X_val.npy")
     y_val = np.load(path / "y_val.npy")
 
     with open(path / "metadata.json", "r") as f:
