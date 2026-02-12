@@ -171,16 +171,9 @@ def process_features(
                 "problem_type": task_type,
                 "n_features": int(x_shape[1]) if len(x_shape) > 1 else 1,
                 "train_samples": int(x_shape[0]),
-                "val_samples": 0,
                 "feature_matrix_format": x_format,
-                "categorical_cols": list(categorical_cols),
-                "text_cols": [],
-                "numeric_cols": list(numeric_cols),
                 "feature_names": feature_names,
                 "pca_applied": bool(apply_pca),
-                "encoders": list(encoders.keys()),
-                "vectorizers": [],
-                "scaler_present": scaler is not None,
                 "notes": "Clustering mode: feature matrix saved without target variable."
             }
 
