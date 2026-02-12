@@ -90,9 +90,25 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     )
     print(f"✅ Processed data saved at: {processed_dir}")
 
+    meta_file = processed_dir / "metadata.json"
+    if meta_file.exists():
+        with open(meta_file, "r") as f:
+            meta = json.load(f)
+        problem_type = meta.get("problem_type", problem_type)
+    else:
+        meta = {}
+
     # -------------------------------------------------------
     # 4) TRAIN MODELS
     # -------------------------------------------------------
+    if problem_type == "clustering":
+        logger.info("Clustering preprocessing completed. Model training is not yet available.")
+        return {
+            "problem_type": "clustering",
+            "status": "preprocessing_completed",
+            "processed_data_path": str(processed_dir),
+        }
+
     print(f"🤖 Training {problem_type} models...")
     results_dir = project_root / "model_results" / dataset_name
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -115,60 +131,50 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     # -------------------------------------------------------
     # 6) FEATURE IMPORTANCE EXTRACTION
     # -------------------------------------------------------
-    meta_file = processed_dir / "metadata.json"
     if meta_file.exists():
-        with open(meta_file, "r") as f:
-            meta = json.load(f)
+        feature_names = meta.get("feature_names", [])
 
-        problem_type = meta.get("problem_type", "")
-        
-        # Skip feature importance for clustering tasks
-        if problem_type == "clustering":
-            logger.info("Skipping feature importance extraction for clustering task.")
+        # Verify PCA was not applied (to ensure feature names match model features)
+        if meta.get("pca_applied", False):
+            logger.warning(
+                "PCA was applied during preprocessing. Feature importance may not be meaningful "
+                "for PCA-transformed features. Skipping feature importance extraction."
+            )
         else:
-            feature_names = meta.get("feature_names", [])
-            
-            # Verify PCA was not applied (to ensure feature names match model features)
-            if meta.get("pca_applied", False):
-                logger.warning(
-                    "PCA was applied during preprocessing. Feature importance may not be meaningful "
-                    "for PCA-transformed features. Skipping feature importance extraction."
-                )
-            else:
-                model_path = results_dir / f"{best_model}.joblib"
-                x_val_path = processed_dir / "X_val.npy"
-                x_val_sparse_path = processed_dir / "X_val.npz"
-                y_val_path = processed_dir / "y_val.npy"
+            model_path = results_dir / f"{best_model}.joblib"
+            x_val_path = processed_dir / "X_val.npy"
+            x_val_sparse_path = processed_dir / "X_val.npz"
+            y_val_path = processed_dir / "y_val.npy"
 
-                if model_path.exists() and y_val_path.exists():
-                    # Load validation features (sparse or dense)
-                    if x_val_sparse_path.exists():
-                        from scipy.sparse import load_npz
-                        X_val = load_npz(x_val_sparse_path)
-                    elif x_val_path.exists():
-                        X_val = np.load(x_val_path)
-                    else:
-                        logger.error(
-                            f"Validation feature matrix not found in '{processed_dir}'. "
-                            f"Expected 'X_val.npz' (sparse) or 'X_val.npy' (dense)."
-                        )
-                        X_val = None
-                    
-                    if X_val is not None:
-                        y_val = np.load(y_val_path)
-                        pipe = joblib.load(model_path)
-                        priorities = compute_feature_priorities(
-                            pipe,
-                            X_val,
-                            y_val,
-                            feature_names,
-                            problem_type,
-                        )
-                        results["feature_importance"] = priorities
+            if model_path.exists() and y_val_path.exists():
+                # Load validation features (sparse or dense)
+                if x_val_sparse_path.exists():
+                    from scipy.sparse import load_npz
+                    X_val = load_npz(x_val_sparse_path)
+                elif x_val_path.exists():
+                    X_val = np.load(x_val_path)
                 else:
-                    logger.warning(
-                        f"Model or validation data not found. Skipping feature importance extraction."
+                    logger.error(
+                        f"Validation feature matrix not found in '{processed_dir}'. "
+                        f"Expected 'X_val.npz' (sparse) or 'X_val.npy' (dense)."
                     )
+                    X_val = None
+
+                if X_val is not None:
+                    y_val = np.load(y_val_path)
+                    pipe = joblib.load(model_path)
+                    priorities = compute_feature_priorities(
+                        pipe,
+                        X_val,
+                        y_val,
+                        feature_names,
+                        problem_type,
+                    )
+                    results["feature_importance"] = priorities
+            else:
+                logger.warning(
+                    "Model or validation data not found. Skipping feature importance extraction."
+                )
 
     # Save summary JSON (after feature importance enrichment)
     summary_path = results_dir / "training_summary.json"

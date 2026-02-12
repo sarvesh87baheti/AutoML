@@ -63,3 +63,25 @@ def test_orchestrator_regression(tmp_path, monkeypatch):
     assert "fake_model" in results
     assert results["fake_model"]["metrics"]["mse"] == 0.123
     assert results["fake_model"]["metadata"]["name"] == "fake_model"
+
+
+def test_orchestrator_clustering_raises_not_supported(tmp_path):
+    dataset_dir = tmp_path / "dataset"
+    dataset_dir.mkdir()
+
+    np.save(dataset_dir / "X_train.npy", np.array([[1, 2], [3, 4]]))
+
+    with open(dataset_dir / "metadata.json", "w") as f:
+        json.dump({"problem_type": "clustering"}, f)
+
+    orch = Orchestrator(
+        dataset_path=dataset_dir,
+        model_scripts_path=tmp_path / "model_scripts",
+        output_path=tmp_path
+    )
+
+    try:
+        orch.run()
+        assert False, "Expected ValueError for unsupported clustering training."
+    except ValueError as exc:
+        assert str(exc) == "Clustering training is not yet supported by Orchestrator."
