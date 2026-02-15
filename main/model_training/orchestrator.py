@@ -7,23 +7,37 @@ from .regression import RegressionTrainer
 from .classification import ClassificationTrainer
 
 def load_processed_dataset(path: Path):
-    x_train_npz = path / "X_train.npz"
-    x_val_npz = path / "X_val.npz"
+    with open(path / "metadata.json", "r") as f:
+        metadata = json.load(f)
 
-    if x_train_npz.exists() and x_val_npz.exists():
+    problem_type = metadata.get("problem_type")
+    x_train_npz = path / "X_train.npz"
+
+    if x_train_npz.exists():
         from scipy.sparse import load_npz
 
         X_train = load_npz(x_train_npz)
-        X_val = load_npz(x_val_npz)
     else:
         X_train = np.load(path / "X_train.npy")
-        X_val = np.load(path / "X_val.npy")
 
-    y_train = np.load(path / "y_train.npy")
-    y_val = np.load(path / "y_val.npy")
+    if problem_type in {"regression", "classification"}:
+        x_val_npz = path / "X_val.npz"
 
-    with open(path / "metadata.json", "r") as f:
-        metadata = json.load(f)
+        if x_val_npz.exists():
+            from scipy.sparse import load_npz
+
+            X_val = load_npz(x_val_npz)
+        else:
+            X_val = np.load(path / "X_val.npy")
+
+        y_train = np.load(path / "y_train.npy")
+        y_val = np.load(path / "y_val.npy")
+    elif problem_type == "clustering":
+        X_val = None
+        y_train = None
+        y_val = None
+    else:
+        raise ValueError(f"Unsupported problem type in metadata: {problem_type}")
 
     return X_train, y_train, X_val, y_val, metadata
 
@@ -43,6 +57,8 @@ class Orchestrator:
             trainer = RegressionTrainer(self.model_scripts_path, self.output_path)
         elif problem_type == "classification":
             trainer = ClassificationTrainer(self.model_scripts_path, self.output_path)
+        elif problem_type == "clustering":
+            raise ValueError("Clustering training is not yet supported by Orchestrator.")
         else:
             raise ValueError(f"Unsupported problem type: {problem_type}")
 

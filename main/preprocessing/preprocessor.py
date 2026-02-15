@@ -113,7 +113,7 @@ def process_features(
         save_path = Path(save_dir)
         save_path.mkdir(parents=True, exist_ok=True)
 
-        if y_final is not None:
+        if task_type in {"regression", "classification"}:
             X_train, X_val, y_train, y_val = train_test_split(
                 X_final, y_final, test_size=test_size, random_state=random_state
             )
@@ -159,34 +159,28 @@ def process_features(
 
         else:
             if issparse(X_final):
-                save_npz(save_path / "X_full.npz", X_final)
+                save_npz(save_path / "X_train.npz", X_final)
                 x_shape = X_final.shape
                 x_format = "sparse_npz"
             else:
-                np.save(save_path / "X_full.npy", X_final)
+                np.save(save_path / "X_train.npy", X_final)
                 x_shape = X_final.shape
                 x_format = "dense_npy"
 
             metadata = {
                 "problem_type": task_type,
                 "n_features": int(x_shape[1]) if len(x_shape) > 1 else 1,
-                "samples": int(x_shape[0]),
+                "train_samples": int(x_shape[0]),
                 "feature_matrix_format": x_format,
-                "categorical_cols": list(categorical_cols),
-                "text_cols": [],
-                "numeric_cols": list(numeric_cols),
                 "feature_names": feature_names,
                 "pca_applied": bool(apply_pca),
-                "encoders": list(encoders.keys()),
-                "vectorizers": [],
-                "scaler_present": scaler is not None,
                 "notes": "Clustering mode: feature matrix saved without target variable."
             }
 
             with open(save_path / "metadata.json", "w") as f:
                 json.dump(metadata, f, indent=4)
 
-            print(f"✅ Saved full feature matrix and metadata to: {save_path}")
+            print(f"✅ Saved clustering train matrix and metadata to: {save_path}")
 
     # --- Minimal return as requested ---
     return {
