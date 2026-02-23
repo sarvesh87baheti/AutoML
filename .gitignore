@@ -45,3 +45,6 @@ yarn-error.log*
 # Lockfile convention
 package-lock.json
 
+# Model results (generated artifacts)
+main/model_results/
+

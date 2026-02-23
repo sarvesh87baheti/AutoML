@@ -14,13 +14,12 @@ MODEL_NAME = "kmeans"
 SUPPORTED_PROBLEM_TYPES = ["kmeans_clustering"]
 
 
-def _build_pipeline(n_clusters: int = 3, random_state: int = 42, **est_kwargs) -> Pipeline:
-    return Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            ("est", KMeans(n_clusters=n_clusters, random_state=random_state, n_init=10, **est_kwargs)),
-        ]
-    )
+def _build_pipeline(n_clusters: int = 3, random_state: int = 42, scale: bool = True, **est_kwargs) -> Pipeline:
+    steps = []
+    if scale:
+        steps.append(("scaler", StandardScaler()))
+    steps.append(("est", KMeans(n_clusters=n_clusters, random_state=random_state, n_init=10, **est_kwargs)))
+    return Pipeline(steps)
 
 
 def _compute_metrics(X: np.ndarray, labels: np.ndarray) -> Dict[str, Optional[float]]:
@@ -49,11 +48,12 @@ def train_model(
     save_path: Optional[Path] = None,
     n_clusters: int = 3,
     random_state: int = 42,
+    scale: bool = True,
     **kwargs,
 ) -> Tuple[Pipeline, Dict[str, Dict[str, Optional[float]]], Dict[str, Any]]:
     X_train = _ensure_array(X_train)
 
-    pipe = _build_pipeline(n_clusters=n_clusters, random_state=random_state, **kwargs)
+    pipe = _build_pipeline(n_clusters=n_clusters, random_state=random_state, scale=scale, **kwargs)
     pipe.fit(X_train)
 
     train_labels = pipe.predict(X_train)
@@ -83,4 +83,4 @@ class Model(ModelScript):
     SUPPORTED_PROBLEM_TYPES = tuple(SUPPORTED_PROBLEM_TYPES)
 
     def train_model(self, X_train, y_train=None, X_val=None, y_val=None, save_path=None, scale=True, **kwargs):
-        return train_model(X_train, y_train=y_train, X_val=X_val, y_val=y_val, save_path=save_path, **kwargs)
+        return train_model(X_train, y_train=y_train, X_val=X_val, y_val=y_val, save_path=save_path, scale=scale, **kwargs)
