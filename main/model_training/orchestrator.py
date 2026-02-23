@@ -5,6 +5,7 @@ from typing import Dict, Any
 
 from .regression import RegressionTrainer
 from .classification import ClassificationTrainer
+from .kmclustering import KMClusteringTrainer
 
 def load_processed_dataset(path: Path):
     with open(path / "metadata.json", "r") as f:
@@ -32,7 +33,7 @@ def load_processed_dataset(path: Path):
 
         y_train = np.load(path / "y_train.npy")
         y_val = np.load(path / "y_val.npy")
-    elif problem_type == "clustering":
+    elif problem_type == "kmeans_clustering":
         X_val = None
         y_train = None
         y_val = None
@@ -57,8 +58,10 @@ class Orchestrator:
             trainer = RegressionTrainer(self.model_scripts_path, self.output_path)
         elif problem_type == "classification":
             trainer = ClassificationTrainer(self.model_scripts_path, self.output_path)
-        elif problem_type == "clustering":
-            raise ValueError("Clustering training is not yet supported by Orchestrator.")
+        elif problem_type == "kmeans_clustering":
+            n_clusters = int(metadata.get("n_clusters", 3))
+            trainer = KMClusteringTrainer(self.model_scripts_path, self.output_path)
+            return trainer.train_all(X_train, y_train=None, X_val=None, y_val=None, n_clusters=n_clusters)
         else:
             raise ValueError(f"Unsupported problem type: {problem_type}")
 

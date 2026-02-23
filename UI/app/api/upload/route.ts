@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     const file = form.get("dataset") as File | null;
     const problem_type = (form.get("problem_type") as string | null) || undefined;
     const target_col = (form.get("target_col") as string | null) || undefined;
+    const k_value = (form.get("k") as string | null) || undefined;
 
     if (!file) {
       return NextResponse.json({ success: false, error: { code: "NO_FILE", message: "No file uploaded" } }, { status: 400 });
@@ -18,6 +19,11 @@ export async function POST(req: Request) {
 
     if ((problem_type === "regression" || problem_type === "classification") && !target_col) {
       return NextResponse.json({ success: false, error: { code: "TARGET_COLUMN_REQUIRED", message: "Target column required for supervised tasks" } }, { status: 400 });
+    }
+
+
+    if (problem_type === "kmeans_clustering" && !k_value) {
+      return NextResponse.json({ success: false, error: { code: "K_REQUIRED", message: "k is required for kmeans clustering" } }, { status: 400 });
     }
 
     // Save uploaded file to workspace `uploaded_files/`
@@ -38,6 +44,9 @@ export async function POST(req: Request) {
     if (target_col) {
       args.push("--target", target_col);
     }
+    if (k_value) {
+      args.push("--k", k_value);
+    }
 
     const result = await runPython(pythonPath, args);
 
@@ -48,7 +57,9 @@ export async function POST(req: Request) {
         "DATASET_NOT_FOUND",
         "UNSUPPORTED_FORMAT",
         "EMPTY_ZIP",
-        "NO_FILE"
+        "NO_FILE",
+        "K_REQUIRED",
+        "K_INVALID"
       ]);
       const status = userErrorCodes.has(result.error?.code) ? 400 : 500;
       return NextResponse.json(result, { status });
@@ -83,6 +94,12 @@ function parsePythonError(stderr: string) {
   } else if (text.includes("Unsupported format")) {
     code = "UNSUPPORTED_FORMAT";
     message = "Unsupported file format. Use CSV, XLS/XLSX or ZIP containing a CSV/XLSX.";
+  } else if (text.includes("Number of clusters (k) must be provided")) {
+    code = "K_REQUIRED";
+    message = "Please provide k (number of clusters) for k-means clustering.";
+  } else if (text.includes("Number of clusters (k) must be >= 2")) {
+    code = "K_INVALID";
+    message = "k must be greater than or equal to 2 for k-means clustering.";
   } else if (text.includes("ZIP contains no CSV/XLSX")) {
     code = "EMPTY_ZIP";
     message = "ZIP file does not contain a CSV or XLS/XLSX file.";

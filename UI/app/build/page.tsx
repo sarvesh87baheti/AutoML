@@ -21,10 +21,11 @@ export default function BuildPage() {
   const [csvData, setCsvData] = useState("")
 
   const [problemType, setProblemType] =
-    useState<"classification" | "regression" | "clustering" | null>(null)
+    useState<"classification" | "regression" | "kmeans_clustering" | null>(null)
 
   const [targetColumn, setTargetColumn] = useState("")
   const [showTargetInput, setShowTargetInput] = useState(false)
+  const [kValue, setKValue] = useState("3")
 
   const [isProcessing, setIsProcessing] = useState(false)
   const [trainingComplete, setTrainingComplete] = useState(false)
@@ -86,11 +87,23 @@ export default function BuildPage() {
           }
         }
 
+        if (problemType === "kmeans_clustering" && (!kValue || Number(kValue) < 2)) {
+          toast({
+            title: "Invalid k",
+            description: "Please provide k as a number greater than or equal to 2.",
+            variant: "destructive",
+          })
+          return
+        }
+
         const formData = new FormData()
         formData.append("dataset", file)
         formData.append("problem_type", problemType)
-        if (problemType !== "clustering") {
+        if (problemType === "classification" || problemType === "regression") {
           formData.append("target_col", targetColumn)
+        }
+        if (problemType === "kmeans_clustering") {
+          formData.append("k", kValue)
         }
 
         const result = await postUpload(formData)
@@ -120,6 +133,9 @@ export default function BuildPage() {
       } else if (code === "TARGET_COLUMN_REQUIRED") {
         title = "Target Column Required"
         friendly = "Please enter a target column for this task."
+      } else if (code === "K_REQUIRED" || code === "K_INVALID") {
+        title = "Invalid k"
+        friendly = "Please enter a valid number of clusters (k ≥ 2)."
       } else if (code === "UNSUPPORTED_FORMAT") {
         title = "Unsupported Format"
         friendly = "Use CSV, XLS/XLSX or ZIP containing one."
@@ -213,7 +229,7 @@ export default function BuildPage() {
                   value={problemType || ""}
                   onValueChange={(val) => {
                     setProblemType(val as any)
-                    setShowTargetInput(val !== "clustering")
+                    setShowTargetInput(val === "classification" || val === "regression")
                   }}
                 >
                   <div className="space-y-3">
@@ -232,10 +248,10 @@ export default function BuildPage() {
                     </div>
 
                     <div className={cn("flex gap-3 p-4 border rounded-md cursor-pointer",
-                      problemType === "clustering" && "border-teal-500")}
+                      problemType === "kmeans_clustering" && "border-teal-500")}
                     >
-                      <RadioGroupItem value="clustering" id="clustering" />
-                      <Label htmlFor="clustering" className="cursor-pointer">Clustering</Label>
+                      <RadioGroupItem value="kmeans_clustering" id="kmeans_clustering" />
+                      <Label htmlFor="kmeans_clustering" className="cursor-pointer">K-Means Clustering</Label>
                     </div>
                   </div>
                 </RadioGroup>
@@ -252,6 +268,19 @@ export default function BuildPage() {
                 </div>
               )}
 
+              {problemType === "kmeans_clustering" && (
+                <div className="p-4 border rounded-lg space-y-2 bg-muted/30">
+                  <Label>Number of Clusters (k) *</Label>
+                  <Input
+                    type="number"
+                    min={2}
+                    placeholder="Enter k"
+                    value={kValue}
+                    onChange={(e) => setKValue(e.target.value)}
+                  />
+                </div>
+              )}
+
               <Button
                 onClick={handleBuildModel}
                 disabled={
@@ -259,7 +288,8 @@ export default function BuildPage() {
                   !problemType ||
                   (dataSource === "upload" && !file) ||
                   (dataSource === "paste" && !csvData) ||
-                  (showTargetInput && !targetColumn)
+                  (showTargetInput && !targetColumn) ||
+                  (problemType === "kmeans_clustering" && (!kValue || Number(kValue) < 2))
                 }
                 className="w-full bg-gradient-to-r from-violet-600 via-blue-500 to-teal-400 text-white"
               >
