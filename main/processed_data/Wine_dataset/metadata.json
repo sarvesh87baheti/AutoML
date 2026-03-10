@@ -1,13 +1,10 @@
 {
-    "problem_type": "classification",
-    "target": "class",
-    "n_features": 10,
-    "train_samples": 128,
-    "val_samples": 33,
+    "problem_type": "kmeans_clustering",
+    "n_features": 14,
+    "train_samples": 161,
     "feature_matrix_format": "dense_npy",
-    "categorical_cols": [],
-    "text_cols": [],
-    "numeric_cols": [
+    "feature_names": [
+        "class",
         "Alcohol",
         "Malic acid",
         "Ash",
@@ -22,10 +19,7 @@
         "OD280/OD315 of diluted wines",
         "Proline "
     ],
-    "encoders": [
-        "target"
-    ],
-    "vectorizers": [],
-    "scaler_present": true,
-    "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
+    "pca_applied": false,
+    "n_clusters": 3,
+    "notes": "K-means clustering mode: feature matrix saved without target variable."
 }

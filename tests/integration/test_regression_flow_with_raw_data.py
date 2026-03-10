@@ -1,6 +1,10 @@
 from pathlib import Path
-from main.fakes.fake_preprocess import fake_preprocess
+
+import pandas as pd
+
 from main.model_training.orchestrator import Orchestrator
+from main.preprocessing.datacleaning import clean_dataframe
+from main.preprocessing.preprocessor import process_features
 
 
 def test_regression_flow_with_raw_data(tmp_path):
@@ -12,19 +16,21 @@ def test_regression_flow_with_raw_data(tmp_path):
     - Assert all models trained successfully
     """
 
-    # ----------------------------------------------------------------------
-    # 1. Locate the actual raw CSV inside your project
-    # ----------------------------------------------------------------------
     project_root = Path(__file__).resolve().parents[2]
     raw_csv = project_root / "main" / "raw_data" / "advertising.csv"
 
     assert raw_csv.exists(), f"Raw data not found at: {raw_csv}"
 
-    # ----------------------------------------------------------------------
-    # 2. Preprocess into processed_data/advertising_test/
-    # ----------------------------------------------------------------------
     processed_dir = tmp_path / "processed_data" / "advertising_test"
-    fake_preprocess(str(raw_csv), str(processed_dir))
+    df = pd.read_csv(raw_csv)
+    df = clean_dataframe(df)
+    process_features(
+        df,
+        target_col="Sales ($)",
+        problem_type="regression",
+        save_dir=str(processed_dir),
+        apply_pca=False,
+    )
 
     # Validate preprocessing output
     required_files = [
@@ -37,20 +43,15 @@ def test_regression_flow_with_raw_data(tmp_path):
     for f in required_files:
         assert (processed_dir / f).exists(), f"Missing file: {f}"
 
-    # ----------------------------------------------------------------------
-    # 3. Run orchestrator (training)
-    # ----------------------------------------------------------------------
     orchestrator = Orchestrator(
         dataset_path=processed_dir,
         model_scripts_path=project_root / "main" / "model_scripts",
-        output_path=tmp_path / "trained_output"
+        output_path=tmp_path / "trained_output",
     )
 
     results = orchestrator.run()
 
-    # ----------------------------------------------------------------------
-    # 4. Check all expected regression models ran
-    # ----------------------------------------------------------------------
+    # Check all expected regression models ran
     expected_models = {"linear", "ridge", "lasso", "elasticnet"}
 
     for model_name in expected_models:
