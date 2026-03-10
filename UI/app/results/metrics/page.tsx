@@ -57,6 +57,14 @@ function useLatestResults() {
 export default function MetricsPage() {
   const { data, loading, error } = useLatestResults()
 
+  const problemType = useMemo(() => {
+    if (data?.problem_type) return data.problem_type
+    if (data?.results?.kmeans?.metrics) return "kmeans_clustering"
+    return undefined
+  }, [data])
+
+  const isKMeans = problemType === "kmeans_clustering"
+
   // ---- Computed values with hooks BEFORE render return ----
 
   const modelMetrics = useMemo(() => {
@@ -69,9 +77,15 @@ export default function MetricsPage() {
     return arr
   }, [data])
 
+  const kmeansTrainMetrics = useMemo(() => {
+    if (!isKMeans) return null
+    const raw = data?.results?.kmeans?.metrics
+    return raw?.train || raw?.val || null
+  }, [data, isKMeans])
+
   const accuracyData = useMemo(() => {
     if (!modelMetrics.length) return []
-    const isRegression = data?.problem_type === "regression"
+    const isRegression = problemType === "regression"
     return modelMetrics
       .map(({ name, metrics }) => ({
         name,
@@ -79,12 +93,12 @@ export default function MetricsPage() {
       }))
       .filter((d) => typeof d.value === "number")
       .sort((a, b) => b.value - a.value)
-  }, [modelMetrics, data?.problem_type])
+  }, [modelMetrics, problemType])
 
-  const bestModelName = useMemo(
-    () => accuracyData[0]?.name ?? "N/A",
-    [accuracyData]
-  )
+  const bestModelName = useMemo(() => {
+    if (isKMeans) return data?.results?.best_model ?? modelMetrics[0]?.name ?? "kmeans"
+    return accuracyData[0]?.name ?? data?.results?.best_model ?? "N/A"
+  }, [accuracyData, data?.results, isKMeans, modelMetrics])
 
   const avgMetric = useMemo(
     () => (accuracyData.length ? accuracyData.reduce((s, m) => s + m.value, 0) / accuracyData.length : 0),
@@ -105,7 +119,7 @@ export default function MetricsPage() {
   }, [data?.results])
 
   const regressionSeries = useMemo(() => {
-    if (data?.problem_type !== "regression") return []
+    if (problemType !== "regression") return []
     const best = data?.results?.[bestModelName]
     const preds = best?.val_predictions
     const actual = best?.val_actual
@@ -115,7 +129,7 @@ export default function MetricsPage() {
       out.push({ index: i, actual: actual[i], predicted: preds[i] })
     }
     return out
-  }, [data?.results, bestModelName])
+  }, [data?.results, bestModelName, problemType])
 
   const handleShare = () => {
     const text = `I trained models using EasyFlow ML! Best model: ${bestModelName}`
@@ -124,7 +138,14 @@ export default function MetricsPage() {
   }
 
   const handleExportReport = () => {
-    const blob = new Blob([JSON.stringify({ dataset: data?.dataset, bestModelName, accuracyData }, null, 2)], { type: "application/json" })
+    const payload = {
+      dataset: data?.dataset,
+      problem_type: problemType,
+      bestModelName,
+      comparison: isKMeans ? undefined : accuracyData,
+      clustering_metrics: isKMeans ? kmeansTrainMetrics : undefined,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
@@ -163,46 +184,121 @@ export default function MetricsPage() {
         </div>
 
         <h1 className="text-3xl font-bold">Model Performance Metrics</h1>
-        <p className="text-muted-foreground">Evaluation of all trained models with comparison charts</p>
+        <p className="text-muted-foreground">
+          {isKMeans
+            ? "Clustering quality metrics for the trained model"
+            : "Evaluation of all trained models with comparison charts"}
+        </p>
 
         {/* SUMMARY CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader><CardTitle>Best Model</CardTitle></CardHeader>
-            <CardContent><p className="text-2xl font-bold">{bestModelName}</p></CardContent>
-          </Card>
+        {!isKMeans ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader><CardTitle>Best Model</CardTitle></CardHeader>
+              <CardContent><p className="text-2xl font-bold">{bestModelName}</p></CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader><CardTitle>{data?.problem_type === "regression" ? "Avg R²" : "Avg Accuracy"}</CardTitle></CardHeader>
-            <CardContent><p className="text-2xl font-bold">{avgMetric.toFixed(3)}</p></CardContent>
-          </Card>
+            <Card>
+              <CardHeader><CardTitle>{problemType === "regression" ? "Avg R²" : "Avg Accuracy"}</CardTitle></CardHeader>
+              <CardContent><p className="text-2xl font-bold">{avgMetric.toFixed(3)}</p></CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader><CardTitle>Models Trained</CardTitle></CardHeader>
-            <CardContent><p className="text-2xl font-bold">{modelMetrics.length}</p></CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader><CardTitle>Models Trained</CardTitle></CardHeader>
+              <CardContent><p className="text-2xl font-bold">{modelMetrics.length}</p></CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader><CardTitle>Model</CardTitle></CardHeader>
+              <CardContent><p className="text-2xl font-bold">{bestModelName}</p></CardContent>
+            </Card>
 
-        {/* BAR CHART: ACCURACY / R2 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{data?.problem_type === "regression" ? "Model R² Comparison" : "Model Accuracy Comparison"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={accuracyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Silhouette</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {typeof kmeansTrainMetrics?.silhouette === "number" ? kmeansTrainMetrics.silhouette.toFixed(3) : "N/A"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Inertia</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {typeof kmeansTrainMetrics?.inertia === "number" ? kmeansTrainMetrics.inertia.toFixed(3) : "N/A"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* BAR CHART: ACCURACY / R2 (not for kmeans) */}
+        {!isKMeans && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{problemType === "regression" ? "Model R² Comparison" : "Model Accuracy Comparison"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={accuracyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* KMEANS METRICS (single model, no comparison) */}
+        {isKMeans && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Clustering Metrics</CardTitle>
+              <CardDescription>Relevant evaluation metrics for k-means clustering</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <span className="text-sm text-muted-foreground">Silhouette</span>
+                  <span className="font-medium">
+                    {typeof kmeansTrainMetrics?.silhouette === "number" ? kmeansTrainMetrics.silhouette.toFixed(4) : "N/A"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <span className="text-sm text-muted-foreground">Calinski-Harabasz</span>
+                  <span className="font-medium">
+                    {typeof kmeansTrainMetrics?.calinski_harabasz === "number" ? kmeansTrainMetrics.calinski_harabasz.toFixed(4) : "N/A"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <span className="text-sm text-muted-foreground">Davies-Bouldin</span>
+                  <span className="font-medium">
+                    {typeof kmeansTrainMetrics?.davies_bouldin === "number" ? kmeansTrainMetrics.davies_bouldin.toFixed(4) : "N/A"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <span className="text-sm text-muted-foreground">Inertia</span>
+                  <span className="font-medium">
+                    {typeof kmeansTrainMetrics?.inertia === "number" ? kmeansTrainMetrics.inertia.toFixed(4) : "N/A"}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* LINES CHART: Actual vs Predicted */}
-        {data?.problem_type === "regression" && (
+        {problemType === "regression" && (
           <Card>
             <CardHeader><CardTitle>Actual vs Predicted (Validation)</CardTitle></CardHeader>
             <CardContent>
@@ -222,7 +318,7 @@ export default function MetricsPage() {
         )}
 
         {/* CHART: Precision & Recall Comparison (Classification Only) */}
-        {data?.problem_type === "classification" && (
+        {problemType === "classification" && (
   <Card>
     <CardHeader>
       <CardTitle>Precision & Recall Comparison</CardTitle>
@@ -249,7 +345,7 @@ export default function MetricsPage() {
         )}
 
         {/* FEATURE IMPORTANCE */}
-        {featureImportance.length > 0 && (
+        {!isKMeans && featureImportance.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Top Feature Importance</CardTitle>
