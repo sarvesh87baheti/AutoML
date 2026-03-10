@@ -31,11 +31,13 @@ def infer_task_type(y: pd.Series, classification_threshold=20, ratio_threshold=0
 def process_features(
     cleaned_df: pd.DataFrame,
     target_col: str = "",
+    problem_type: Optional[str] = None,
     save_dir: Optional[str] = None,
     test_size: float = 0.2,
     random_state: int = 42,
     apply_pca: bool = True,
     pca_variance: float = 0.95,
+    n_clusters: Optional[int] = None,
 ):
     """
     Process features for ML tasks and optionally save train/val arrays + metadata.
@@ -51,11 +53,11 @@ def process_features(
     if target_col and target_col in cleaned_df.columns:
         y = cleaned_df[target_col]
         X_df = cleaned_df.drop(columns=[target_col]).copy()
-        task_type = infer_task_type(y)
+        task_type = problem_type if problem_type in {"regression", "classification"} else infer_task_type(y)
     else:
         y = None
         X_df = cleaned_df.copy()
-        task_type = "clustering"
+        task_type = problem_type if problem_type in {"kmeans_clustering"} else "kmeans_clustering"
 
     # --- Detect column types ---
     numeric_cols = X_df.select_dtypes(include=np.number).columns
@@ -174,13 +176,14 @@ def process_features(
                 "feature_matrix_format": x_format,
                 "feature_names": feature_names,
                 "pca_applied": bool(apply_pca),
-                "notes": "Clustering mode: feature matrix saved without target variable."
+                "n_clusters": int(n_clusters) if n_clusters is not None else 3,
+                "notes": "K-means clustering mode: feature matrix saved without target variable."
             }
 
             with open(save_path / "metadata.json", "w") as f:
                 json.dump(metadata, f, indent=4)
 
-            print(f"✅ Saved clustering train matrix and metadata to: {save_path}")
+            print(f"✅ Saved k-means clustering train matrix and metadata to: {save_path}")
 
     # --- Minimal return as requested ---
     return {

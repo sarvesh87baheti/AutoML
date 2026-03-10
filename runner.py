@@ -27,7 +27,7 @@ from main.model_training.feature_importance import compute_feature_priorities
 from main.final_model_selection.final_model_sel import compute_model_scores
 
 
-def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
+def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_clusters: int = None):
     print("\n===============================")
     print("🚀 Starting AutoML Pipeline")
     print("===============================\n")
@@ -74,8 +74,14 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
             raise ValueError(f"❌ Target column must be provided for {problem_type}.")
         if target_col not in df.columns:
             raise ValueError(f"❌ Target column '{target_col}' not found in dataset.")
-    else:
+    elif problem_type == "kmeans_clustering":
         target_col = None
+        if n_clusters is None:
+            raise ValueError("❌ Number of clusters (k) must be provided for kmeans_clustering.")
+        if int(n_clusters) < 2:
+            raise ValueError("❌ Number of clusters (k) must be >= 2.")
+    else:
+        raise ValueError(f"❌ Unsupported problem type: {problem_type}")
 
     # -------------------------------------------------------
     # 3) PREPROCESS & SAVE PROCESSED DATA
@@ -85,8 +91,10 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     process_features(
         df,
         target_col=target_col,
+        problem_type=problem_type,
         save_dir=str(processed_dir),
         apply_pca=False,
+        n_clusters=n_clusters,
     )
     print(f"✅ Processed data saved at: {processed_dir}")
 
@@ -101,14 +109,6 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     # -------------------------------------------------------
     # 4) TRAIN MODELS
     # -------------------------------------------------------
-    if problem_type == "clustering":
-        logger.info("Clustering preprocessing completed. Model training is not yet available.")
-        return {
-            "problem_type": "clustering",
-            "status": "preprocessing_completed",
-            "processed_data_path": str(processed_dir),
-        }
-
     print(f"🤖 Training {problem_type} models...")
     results_dir = project_root / "model_results" / dataset_name
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -124,9 +124,14 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
     # -------------------------------------------------------
     # 5) BEST MODEL SELECTION
     # -------------------------------------------------------
-    best_model, scores = compute_model_scores(results)
-    results["best_model"] = best_model
-    results["model_scores"] = scores
+    if problem_type in {"regression", "classification"}:
+        best_model, scores = compute_model_scores(results)
+        results["best_model"] = best_model
+        results["model_scores"] = scores
+    elif problem_type == "kmeans_clustering":
+        best_model = next(iter(results.keys()), None)
+        results["best_model"] = best_model
+        results["model_scores"] = None
 
     # -------------------------------------------------------
     # 6) FEATURE IMPORTANCE EXTRACTION
@@ -146,7 +151,7 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
             x_val_sparse_path = processed_dir / "X_val.npz"
             y_val_path = processed_dir / "y_val.npy"
 
-            if model_path.exists() and y_val_path.exists():
+            if problem_type in {"regression", "classification"} and model_path.exists() and y_val_path.exists():
                 # Load validation features (sparse or dense)
                 if x_val_sparse_path.exists():
                     from scipy.sparse import load_npz
@@ -193,8 +198,9 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None):
 def main():
     parser = argparse.ArgumentParser(description="Run AutoML pipeline.")
     parser.add_argument("--file", required=True)
-    parser.add_argument("--problem", required=True, choices=["regression", "classification", "clustering"])
+    parser.add_argument("--problem", required=True, choices=["regression", "classification", "kmeans_clustering"])
     parser.add_argument("--target", required=False)
+    parser.add_argument("--k", required=False, type=int)
     parser.add_argument("--json", action="store_true")
 
     args = parser.parse_args()
@@ -202,10 +208,10 @@ def main():
     if args.json:
         buf = io.StringIO()
         with redirect_stdout(buf):
-            result = run_pipeline(args.file, args.problem, args.target)
+            result = run_pipeline(args.file, args.problem, args.target, args.k)
         print(json.dumps(result))
     else:
-        result = run_pipeline(args.file, args.problem, args.target)
+        result = run_pipeline(args.file, args.problem, args.target, args.k)
         print(json.dumps(result, indent=2))
 
 
