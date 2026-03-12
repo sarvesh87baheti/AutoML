@@ -24,6 +24,9 @@ export default function Navbar() {
           <Link href="/build" className="text-sm font-medium transition-colors hover:text-primary">
             Build Model
           </Link>
+          <Link href="/build/image-compressor" className="text-sm font-medium transition-colors hover:text-primary">
+            Image Compressor
+          </Link>
           <Link href="/about" className="text-sm font-medium transition-colors hover:text-primary">
             About
           </Link>
@@ -51,6 +54,13 @@ export default function Navbar() {
             onClick={() => setIsMenuOpen(false)}
           >
             Build Model
+          </Link>
+          <Link
+            href="/build/image-compressor"
+            className="text-sm font-medium transition-colors hover:text-primary"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Image Compressor
           </Link>
           <Link
             href="/about"
