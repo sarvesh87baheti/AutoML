@@ -370,9 +370,9 @@ export default function MetricsPage() {
           <Link href="/build">
             <Button variant="outline">Train Another Model</Button>
           </Link>
-          <Link href="/results/predictions">
+          {/* <Link href="/results/predictions">
             <Button>Make Predictions</Button>
-          </Link>
+          </Link> */}
         </div>
       </div>
     </div>
