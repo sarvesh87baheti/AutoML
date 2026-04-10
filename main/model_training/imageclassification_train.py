@@ -2,9 +2,9 @@ import os
 import numpy as np
 
 from preprocessing.imageclassification_preprocess import preprocess
-from model_scripts.imageclustering_model_builder import build_model
-from model_scripts.imageclustering_trainer import train_model
-from model_scripts.imageclustering_evaluator import evaluate
+from model_scripts.imageclassification_model_builder import build_model
+from model_scripts.imageclassification_trainer import train_model
+from model_scripts.imageclassification_evaluator import evaluate
 
 def run_training(zip_path):
 
