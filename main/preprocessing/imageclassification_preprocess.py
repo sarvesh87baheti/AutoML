@@ -23,7 +23,9 @@ BATCH_SIZE = 32
 
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif"}
 
-PROCESSED_DIR = "./processed_data"
+# Determine the processed data directory based on the main module location
+_MAIN_DIR = Path(__file__).resolve().parent.parent
+PROCESSED_DIR = str(_MAIN_DIR / "processed_data")
 
 # ==============================
 # LOAD DATA

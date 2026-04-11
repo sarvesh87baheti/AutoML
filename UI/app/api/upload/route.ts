@@ -21,9 +21,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { code: "TARGET_COLUMN_REQUIRED", message: "Target column required for supervised tasks" } }, { status: 400 });
     }
 
-
     if (problem_type === "kmeans_clustering" && !k_value) {
       return NextResponse.json({ success: false, error: { code: "K_REQUIRED", message: "k is required for kmeans clustering" } }, { status: 400 });
+    }
+
+    // Validate problem type
+    const validProblemTypes = ["regression", "classification", "kmeans_clustering", "image_classification"];
+    if (!validProblemTypes.includes(problem_type || "")) {
+      return NextResponse.json({ success: false, error: { code: "INVALID_PROBLEM_TYPE", message: "Invalid problem type specified" } }, { status: 400 });
     }
 
     // Save uploaded file to workspace `uploaded_files/`
@@ -57,9 +62,11 @@ export async function POST(req: Request) {
         "DATASET_NOT_FOUND",
         "UNSUPPORTED_FORMAT",
         "EMPTY_ZIP",
+        "INVALID_IMAGE_ZIP",
         "NO_FILE",
         "K_REQUIRED",
-        "K_INVALID"
+        "K_INVALID",
+        "INVALID_PROBLEM_TYPE"
       ]);
       const status = userErrorCodes.has(result.error?.code) ? 400 : 500;
       return NextResponse.json(result, { status });
@@ -93,16 +100,22 @@ function parsePythonError(stderr: string) {
     message = "Uploaded dataset could not be located on the server.";
   } else if (text.includes("Unsupported format")) {
     code = "UNSUPPORTED_FORMAT";
-    message = "Unsupported file format. Use CSV, XLS/XLSX or ZIP containing a CSV/XLSX.";
+    message = "Unsupported file format. Use CSV, XLS/XLSX, or ZIP for images.";
   } else if (text.includes("Number of clusters (k) must be provided")) {
     code = "K_REQUIRED";
     message = "Please provide k (number of clusters) for k-means clustering.";
   } else if (text.includes("Number of clusters (k) must be >= 2")) {
     code = "K_INVALID";
     message = "k must be greater than or equal to 2 for k-means clustering.";
-  } else if (text.includes("ZIP contains no CSV/XLSX")) {
+  } else if (text.includes("ZIP contains no CSV/XLSX") || text.includes("ZIP contains no image")) {
     code = "EMPTY_ZIP";
-    message = "ZIP file does not contain a CSV or XLS/XLSX file.";
+    message = "ZIP file does not contain valid data or images.";
+  } else if (text.includes("Invalid image ZIP") || text.includes("image classification") && text.includes("invalid")) {
+    code = "INVALID_IMAGE_ZIP";
+    message = "ZIP structure invalid. Expected: folders for each class with images inside.";
+  } else if (text.includes("Unsupported problem type")) {
+    code = "INVALID_PROBLEM_TYPE";
+    message = "Invalid problem type specified.";
   }
 
   return { success: false, error: { code, message, raw: text } };

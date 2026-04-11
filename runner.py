@@ -23,6 +23,7 @@ if str(ROOT.parent) not in sys.path:
 from main.preprocessing.datacleaning import clean_dataframe
 from main.preprocessing.preprocessor import process_features
 from main.model_training.orchestrator import Orchestrator
+from main.model_training.imageclassification_train import run_training as run_image_classification_training
 from main.model_training.feature_importance import compute_feature_priorities
 from main.final_model_selection.final_model_sel import compute_model_scores
 
@@ -36,6 +37,33 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_cl
     if not dataset_path.exists():
         raise FileNotFoundError(f"❌ Dataset not found: {file_path}")
 
+    # -------------------------------------------------------
+    # HANDLE IMAGE CLASSIFICATION SEPARATELY
+    # -------------------------------------------------------
+    if problem_type == "image_classification":
+        print(f"📂 Loading image dataset: {dataset_path.name}")
+        
+        if not dataset_path.suffix.lower() == ".zip":
+            raise ValueError("❌ Image classification requires a ZIP file with class folders containing images.")
+        
+        try:
+            # Call the dedicated image classification pipeline
+            run_image_classification_training(str(dataset_path))
+            
+            # Return a simple success response
+            dataset_name = dataset_path.stem
+            return {
+                "problem_type": "image_classification",
+                "dataset_name": dataset_name,
+                "status": "completed",
+                "message": f"Image classification model trained successfully for {dataset_name}"
+            }
+        except Exception as e:
+            raise ValueError(f"❌ Image classification training failed: {str(e)}")
+
+    # -------------------------------------------------------
+    # STANDARD PIPELINE FOR REGRESSION, CLASSIFICATION, KMEANS
+    # -------------------------------------------------------
     dataset_name = dataset_path.stem
     project_root = ROOT / "main"
 
@@ -198,7 +226,7 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_cl
 def main():
     parser = argparse.ArgumentParser(description="Run AutoML pipeline.")
     parser.add_argument("--file", required=True)
-    parser.add_argument("--problem", required=True, choices=["regression", "classification", "kmeans_clustering"])
+    parser.add_argument("--problem", required=True, choices=["regression", "classification", "kmeans_clustering", "image_classification"])
     parser.add_argument("--target", required=False)
     parser.add_argument("--k", required=False, type=int)
     parser.add_argument("--json", action="store_true")

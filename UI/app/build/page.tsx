@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { FileText, Upload, BarChart3, Wand2 } from "lucide-react"
+import { FileText, Upload, BarChart3, Wand2, Image } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
@@ -21,7 +21,7 @@ export default function BuildPage() {
   const [csvData, setCsvData] = useState("")
 
   const [problemType, setProblemType] =
-    useState<"classification" | "regression" | "kmeans_clustering" | null>(null)
+    useState<"classification" | "regression" | "kmeans_clustering" | "image_classification" | null>(null)
 
   const [targetColumn, setTargetColumn] = useState("")
   const [showTargetInput, setShowTargetInput] = useState(false)
@@ -59,6 +59,7 @@ export default function BuildPage() {
         }
         reader.readAsText(f)
       }
+      // For ZIP files (image classification), skip header parsing
     }
   }
 
@@ -74,6 +75,28 @@ export default function BuildPage() {
             variant: "destructive",
           })
           return
+        }
+
+        // Validate file type based on problem type
+        if (problemType === "image_classification" && !file.name.toLowerCase().endsWith(".zip")) {
+          toast({
+            title: "Invalid File Format",
+            description: "Please upload a ZIP file containing image folders for image classification.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        if (problemType !== "image_classification") {
+          const fileName = file.name.toLowerCase()
+          if (!fileName.endsWith(".csv") && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
+            toast({
+              title: "Invalid File Format",
+              description: "Please upload a CSV or Excel file.",
+              variant: "destructive",
+            })
+            return
+          }
         }
 
         if (showTargetInput && targetColumn && fileColumns.length > 0) {
@@ -138,10 +161,13 @@ export default function BuildPage() {
         friendly = "Please enter a valid number of clusters (k ≥ 2)."
       } else if (code === "UNSUPPORTED_FORMAT") {
         title = "Unsupported Format"
-        friendly = "Use CSV, XLS/XLSX or ZIP containing one."
+        friendly = "Use CSV, XLS/XLSX for tabular data, or ZIP for image classification."
       } else if (code === "EMPTY_ZIP") {
         title = "Empty ZIP"
-        friendly = "ZIP contained no usable file."
+        friendly = "ZIP contained no usable files or folders."
+      } else if (code === "INVALID_IMAGE_ZIP") {
+        title = "Invalid Image ZIP"
+        friendly = "ZIP should contain folders for each class with images inside."
       }
 
       toast({
@@ -177,59 +203,14 @@ export default function BuildPage() {
 
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <Label>Data Source</Label>
-                <Tabs value={dataSource} onValueChange={setDataSource}>
-                  <TabsList className="grid grid-cols-2">
-                    <TabsTrigger value="upload">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload File
-                    </TabsTrigger>
-                    <TabsTrigger value="paste">
-                      <FileText className="mr-2 h-4 w-4" />
-                      Paste CSV
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="upload">
-                    <div className="border-2 border-dashed p-8 rounded-lg text-center">
-                      <Button
-                        variant="outline"
-                        onClick={() => document.getElementById("data-upload")?.click()}
-                      >
-                        Select File
-                      </Button>
-                      <Input id="data-upload" type="file" accept=".csv,.xlsx,.xls"
-                        className="hidden" onChange={handleFileChange}
-                      />
-
-                      {file && <p className="mt-3 text-sm text-green-600">Selected: {file.name}</p>}
-                      {fileColumns.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Detected columns: {fileColumns.slice(0, 8).join(", ")}
-                          {fileColumns.length > 8 && " ..."}
-                        </p>
-                      )}
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="paste">
-                    <Textarea
-                      placeholder="Paste CSV data here..."
-                      value={csvData}
-                      onChange={(e) => setCsvData(e.target.value)}
-                      className="min-h-[200px]"
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-
-              <div className="space-y-3">
                 <Label>Problem Type</Label>
                 <RadioGroup
                   value={problemType || ""}
                   onValueChange={(val) => {
                     setProblemType(val as any)
                     setShowTargetInput(val === "classification" || val === "regression")
+                    setFile(null)
+                    setFileColumns([])
                   }}
                 >
                   <div className="space-y-3">
@@ -253,8 +234,83 @@ export default function BuildPage() {
                       <RadioGroupItem value="kmeans_clustering" id="kmeans_clustering" />
                       <Label htmlFor="kmeans_clustering" className="cursor-pointer">K-Means Clustering</Label>
                     </div>
+
+                    <div className={cn("flex gap-3 p-4 border rounded-md cursor-pointer",
+                      problemType === "image_classification" && "border-orange-500")}
+                    >
+                      <RadioGroupItem value="image_classification" id="image_classification" />
+                      <Label htmlFor="image_classification" className="cursor-pointer flex items-center gap-2">
+                        <Image className="h-4 w-4" />
+                        Image Classification
+                      </Label>
+                    </div>
                   </div>
                 </RadioGroup>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Data Source</Label>
+                {problemType === "image_classification" ? (
+                  <div className="border-2 border-dashed p-8 rounded-lg text-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => document.getElementById("data-upload")?.click()}
+                    >
+                      Select ZIP File
+                    </Button>
+                    <Input id="data-upload" type="file" accept=".zip"
+                      className="hidden" onChange={handleFileChange}
+                    />
+                    <p className="text-sm text-muted-foreground mt-4">
+                      Upload a ZIP containing folders for each class with images inside
+                    </p>
+                    {file && <p className="mt-3 text-sm text-green-600">Selected: {file.name}</p>}
+                  </div>
+                ) : (
+                  <Tabs value={dataSource} onValueChange={setDataSource}>
+                    <TabsList className="grid grid-cols-2">
+                      <TabsTrigger value="upload">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload File
+                      </TabsTrigger>
+                      <TabsTrigger value="paste">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Paste CSV
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="upload">
+                      <div className="border-2 border-dashed p-8 rounded-lg text-center">
+                        <Button
+                          variant="outline"
+                          onClick={() => document.getElementById("data-upload")?.click()}
+                        >
+                          Select File
+                        </Button>
+                        <Input id="data-upload" type="file" accept=".csv,.xlsx,.xls"
+                          className="hidden" onChange={handleFileChange}
+                        />
+
+                        {file && <p className="mt-3 text-sm text-green-600">Selected: {file.name}</p>}
+                        {fileColumns.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Detected columns: {fileColumns.slice(0, 8).join(", ")}
+                            {fileColumns.length > 8 && " ..."}
+                          </p>
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="paste">
+                      <Textarea
+                        placeholder="Paste CSV data here..."
+                        value={csvData}
+                        onChange={(e) => setCsvData(e.target.value)}
+                        className="min-h-[200px]"
+                      />
+                    </TabsContent>
+                  </Tabs>
+                )}
               </div>
 
               {showTargetInput && (
@@ -286,7 +342,9 @@ export default function BuildPage() {
                 disabled={
                   isProcessing ||
                   !problemType ||
-                  (dataSource === "upload" && !file) ||
+                  (dataSource === "upload" && !file && problemType !== "image_classification") ||
+                  (problemType !== "image_classification" && dataSource === "upload" && !file) ||
+                  (problemType === "image_classification" && !file) ||
                   (dataSource === "paste" && !csvData) ||
                   (showTargetInput && !targetColumn) ||
                   (problemType === "kmeans_clustering" && (!kValue || Number(kValue) < 2))

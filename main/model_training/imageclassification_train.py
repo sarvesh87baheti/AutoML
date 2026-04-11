@@ -1,25 +1,40 @@
 import os
 import numpy as np
+import sys
+from pathlib import Path
 
-from preprocessing.imageclassification_preprocess import preprocess
-from model_scripts.imageclassification_model_builder import build_model
-from model_scripts.imageclassification_trainer import train_model
-from model_scripts.imageclassification_evaluator import evaluate
+# Handle imports for both direct execution and module import
+try:
+    from preprocessing.imageclassification_preprocess import preprocess
+    from model_scripts.imageclassification_model_builder import build_model
+    from model_scripts.imageclassification_trainer import train_model
+    from model_scripts.imageclassification_evaluator import evaluate
+except ImportError:
+    from main.preprocessing.imageclassification_preprocess import preprocess
+    from main.model_scripts.imageclassification_model_builder import build_model
+    from main.model_scripts.imageclassification_trainer import train_model
+    from main.model_scripts.imageclassification_evaluator import evaluate
 
 def run_training(zip_path):
 
     dataset_name = os.path.splitext(os.path.basename(zip_path))[0]
-    result_dir = f"./model_results/{dataset_name}"
-    os.makedirs(result_dir, exist_ok=True)
+    
+    # Determine base directory (main directory)
+    main_dir = Path(__file__).resolve().parent.parent
+    
+    result_dir = main_dir / "model_results" / dataset_name
+    result_dir.mkdir(parents=True, exist_ok=True)
+    
+    processed_data_dir = main_dir / "processed_data" / dataset_name
 
     # 🔥 PREPROCESS
     train_ds, val_ds, test_ds = preprocess(zip_path)
 
     # load classes
-    class_names = np.load(f"./processed_data/{dataset_name}/classes.npy")
+    class_names = np.load(processed_data_dir / "classes.npy")
 
     # load y_test (needed for metrics)
-    y_test = np.load(f"./processed_data/{dataset_name}/y_test.npy")
+    y_test = np.load(processed_data_dir / "y_test.npy")
 
     # 🔥 MODEL
     model, base_model = build_model(len(class_names))
@@ -30,7 +45,7 @@ def run_training(zip_path):
         base_model,
         train_ds,
         val_ds,
-        os.path.join(result_dir, "model.keras")
+        result_dir / "model.keras"
     )
 
     # 🔥 EVALUATE
@@ -39,7 +54,7 @@ def run_training(zip_path):
         test_ds,
         y_test,
         class_names,
-        result_dir
+        str(result_dir)
     )
 
     print(f"\nResults saved in: {result_dir}")
