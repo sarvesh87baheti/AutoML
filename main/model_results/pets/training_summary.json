@@ -1,0 +1,17 @@
+{
+    "problem_type": "image_classification",
+    "dataset_name": "pets",
+    "best_model": "image_classification",
+    "results": {
+        "image_classification": {
+            "metrics": {
+                "val": {
+                    "accuracy": 1.0,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1": 1.0
+                }
+            }
+        }
+    }
+}

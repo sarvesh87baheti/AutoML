@@ -49,15 +49,44 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_cl
         try:
             # Call the dedicated image classification pipeline
             run_image_classification_training(str(dataset_path))
-            
-            # Return a simple success response
+
             dataset_name = dataset_path.stem
-            return {
+            result_dir = ROOT / "main" / "model_results" / dataset_name
+            summary_path = result_dir / "training_summary.json"
+            metrics_path = result_dir / "metrics.json"
+
+            summary = {
                 "problem_type": "image_classification",
                 "dataset_name": dataset_name,
-                "status": "completed",
-                "message": f"Image classification model trained successfully for {dataset_name}"
+                "best_model": "image_classification",
+                "results": {
+                    "image_classification": {
+                        "metrics": {
+                            "val": {
+                                "accuracy": None,
+                                "precision": None,
+                                "recall": None,
+                                "f1": None,
+                            }
+                        }
+                    }
+                }
             }
+
+            if metrics_path.exists():
+                with open(metrics_path, "r") as f:
+                    report = json.load(f)
+                summary["results"]["image_classification"]["metrics"]["val"] = {
+                    "accuracy": report.get("accuracy"),
+                    "precision": report.get("macro avg", {}).get("precision") or report.get("weighted avg", {}).get("precision"),
+                    "recall": report.get("macro avg", {}).get("recall") or report.get("weighted avg", {}).get("recall"),
+                    "f1": report.get("macro avg", {}).get("f1-score") or report.get("weighted avg", {}).get("f1-score"),
+                }
+
+            with open(summary_path, "w") as f:
+                json.dump(summary, f, indent=4)
+
+            return summary
         except Exception as e:
             raise ValueError(f"❌ Image classification training failed: {str(e)}")
 

@@ -64,8 +64,16 @@ export default function MetricsPage() {
   }, [data])
 
   const isKMeans = problemType === "kmeans_clustering"
+  const isClassification = problemType === "classification" || problemType === "image_classification"
+  const isImageClassification = problemType === "image_classification"
 
   // ---- Computed values with hooks BEFORE render return ----
+
+  const imageClassificationMetrics = useMemo(() => {
+    if (!isImageClassification) return null
+    const raw = data?.results?.image_classification?.metrics
+    return raw?.val || raw?.train || raw?.test || null
+  }, [data, isImageClassification])
 
   const modelMetrics = useMemo(() => {
     const arr: { name: string; metrics: any }[] = []
@@ -74,8 +82,11 @@ export default function MetricsPage() {
       const m = value?.metrics?.val || value?.metrics?.train
       if (m) arr.push({ name, metrics: m })
     }
+    if (!arr.length && imageClassificationMetrics) {
+      arr.push({ name: "image_classification", metrics: imageClassificationMetrics })
+    }
     return arr
-  }, [data])
+  }, [data, imageClassificationMetrics])
 
   const kmeansTrainMetrics = useMemo(() => {
     if (!isKMeans) return null
@@ -187,6 +198,8 @@ export default function MetricsPage() {
         <p className="text-muted-foreground">
           {isKMeans
             ? "Clustering quality metrics for the trained model"
+            : isImageClassification
+            ? "Image classification model performance and evaluation metrics"
             : "Evaluation of all trained models with comparison charts"}
         </p>
 
@@ -318,7 +331,7 @@ export default function MetricsPage() {
         )}
 
         {/* CHART: Precision & Recall Comparison (Classification Only) */}
-        {problemType === "classification" && (
+        {isClassification && (
   <Card>
     <CardHeader>
       <CardTitle>Precision & Recall Comparison</CardTitle>
