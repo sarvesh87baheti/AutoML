@@ -54,6 +54,7 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_cl
             result_dir = ROOT / "main" / "model_results" / dataset_name
             summary_path = result_dir / "training_summary.json"
             metrics_path = result_dir / "metrics.json"
+            confusion_matrix_path = result_dir / "confusion_matrix.json"
 
             summary = {
                 "problem_type": "image_classification",
@@ -68,7 +69,8 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_cl
                                 "recall": None,
                                 "f1": None,
                             }
-                        }
+                        },
+                        "confusion_matrix": None
                     }
                 }
             }
@@ -82,6 +84,10 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_cl
                     "recall": report.get("macro avg", {}).get("recall") or report.get("weighted avg", {}).get("recall"),
                     "f1": report.get("macro avg", {}).get("f1-score") or report.get("weighted avg", {}).get("f1-score"),
                 }
+
+            if confusion_matrix_path.exists():
+                with open(confusion_matrix_path, "r") as f:
+                    summary["results"]["image_classification"]["confusion_matrix"] = json.load(f)
 
             with open(summary_path, "w") as f:
                 json.dump(summary, f, indent=4)

@@ -27,6 +27,17 @@ def evaluate(model, test_ds, y_test, class_names, save_dir):
 
     # Confusion matrix
     cm = confusion_matrix(y_true, y_pred)
+    
+    # Save confusion matrix as JSON
+    cm_json = {
+        "matrix": cm.tolist(),
+        "class_names": class_names.tolist() if hasattr(class_names, 'tolist') else list(class_names),
+        "labels": class_names.tolist() if hasattr(class_names, 'tolist') else list(class_names)
+    }
+    with open(os.path.join(save_dir, "confusion_matrix.json"), "w") as f:
+        json.dump(cm_json, f, indent=4)
+    
+    # Save confusion matrix as PNG
     plt.figure(figsize=(6,6))
     sns.heatmap(cm, annot=True, fmt="d")
     plt.savefig(os.path.join(save_dir, "confusion_matrix.png"))

@@ -1,0 +1,20 @@
+{
+    "matrix": [
+        [
+            4,
+            0
+        ],
+        [
+            0,
+            4
+        ]
+    ],
+    "class_names": [
+        "cats",
+        "dogs"
+    ],
+    "labels": [
+        "cats",
+        "dogs"
+    ]
+}

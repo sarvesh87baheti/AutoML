@@ -142,6 +142,16 @@ export default function MetricsPage() {
     return out
   }, [data?.results, bestModelName, problemType])
 
+  const confusionMatrixData = useMemo(() => {
+    if (!isClassification) return null
+    if (isImageClassification) {
+      return data?.results?.image_classification?.confusion_matrix
+    }
+    // For regular classification, confusion matrix may be in model results
+    const modelResult = data?.results?.[bestModelName]
+    return modelResult?.confusion_matrix
+  }, [data?.results, bestModelName, isClassification, isImageClassification])
+
   const handleShare = () => {
     const text = `I trained models using EasyFlow ML! Best model: ${bestModelName}`
     navigator.clipboard.writeText(text)
@@ -355,6 +365,57 @@ export default function MetricsPage() {
       </ResponsiveContainer>
     </CardContent>
   </Card>
+        )}
+
+        {/* CONFUSION MATRIX (Classification Only) */}
+        {isClassification && confusionMatrixData && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Confusion Matrix</CardTitle>
+              <CardDescription>Predicted vs Actual classifications</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr>
+                      <th className="border p-2 bg-gray-100 text-left font-semibold">Actual \ Predicted</th>
+                      {confusionMatrixData.class_names?.map((className: string, idx: number) => (
+                        <th key={idx} className="border p-2 bg-gray-100 text-center font-semibold">
+                          {className}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {confusionMatrixData.matrix?.map((row: number[], rowIdx: number) => {
+                      const maxVal = Math.max(...row)
+                      return (
+                        <tr key={rowIdx}>
+                          <td className="border p-2 bg-gray-100 font-semibold">
+                            {confusionMatrixData.class_names?.[rowIdx] || `Class ${rowIdx}`}
+                          </td>
+                          {row.map((val: number, colIdx: number) => {
+                            const intensity = maxVal > 0 ? val / maxVal : 0
+                            const bgColor = intensity > 0.7 ? 'bg-green-600' : intensity > 0.4 ? 'bg-green-400' : intensity > 0 ? 'bg-yellow-300' : 'bg-gray-50'
+                            const textColor = intensity > 0.5 ? 'text-white' : 'text-gray-900'
+                            return (
+                              <td key={colIdx} className={`border p-2 text-center font-semibold ${bgColor} ${textColor}`}>
+                                {val}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 text-xs text-muted-foreground">
+                <p>Color intensity indicates cell values: darker green = higher values</p>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* FEATURE IMPORTANCE */}

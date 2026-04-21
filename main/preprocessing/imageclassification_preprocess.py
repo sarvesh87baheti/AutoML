@@ -17,7 +17,7 @@ from collections import Counter
 # ==============================
 IMG_SIZE = (224, 224)
 VAL_SPLIT = 0.15
-TEST_SPLIT = 0.15
+TEST_SPLIT = 0.4
 RANDOM_SEED = 42
 BATCH_SIZE = 32
 

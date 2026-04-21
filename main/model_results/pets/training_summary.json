@@ -11,6 +11,26 @@
                     "recall": 1.0,
                     "f1": 1.0
                 }
+            },
+            "confusion_matrix": {
+                "matrix": [
+                    [
+                        4,
+                        0
+                    ],
+                    [
+                        0,
+                        4
+                    ]
+                ],
+                "class_names": [
+                    "cats",
+                    "dogs"
+                ],
+                "labels": [
+                    "cats",
+                    "dogs"
+                ]
             }
         }
     }
