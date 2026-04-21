@@ -195,6 +195,70 @@ def run_pipeline(file_path: str, problem_type: str, target_col: str = None, n_cl
         best_model = next(iter(results.keys()), None)
         results["best_model"] = best_model
         results["model_scores"] = None
+        
+        # Extract clustering visualization data
+        try:
+            x_train_path = processed_dir / "X_train.npy"
+            x_train_sparse_path = processed_dir / "X_train.npz"
+            
+            if x_train_sparse_path.exists():
+                from scipy.sparse import load_npz
+                X_train = load_npz(x_train_sparse_path).toarray()
+            elif x_train_path.exists():
+                X_train = np.load(x_train_path)
+            else:
+                X_train = None
+            
+            if X_train is not None and best_model and best_model in results:
+                cluster_labels = results[best_model].get("cluster_labels", [])
+                
+                # Get original number of features
+                n_features = X_train.shape[1]
+                
+                # If more than 3 features, reduce to 2D using PCA
+                if n_features > 3:
+                    from sklearn.decomposition import PCA
+                    pca = PCA(n_components=2)
+                    X_viz = pca.fit_transform(X_train)
+                    explained_var = pca.explained_variance_ratio_.tolist()
+                    viz_dims = 2
+                else:
+                    X_viz = X_train[:, :min(n_features, 3)]
+                    explained_var = None
+                    viz_dims = min(n_features, 3)
+                
+                # Get best model object for cluster centers
+                model_path = results_dir / f"{best_model}.joblib"
+                if model_path.exists():
+                    pipe = joblib.load(model_path)
+                    try:
+                        # Get cluster centers from the kmeans model
+                        kmeans = pipe.named_steps.get("kmeans", pipe)
+                        if hasattr(kmeans, "cluster_centers_"):
+                            centers = kmeans.cluster_centers_
+                            if n_features > 3:
+                                # Transform centers to 2D
+                                centers_viz = pca.transform(centers)
+                            else:
+                                centers_viz = centers[:, :min(n_features, 3)]
+                        else:
+                            centers_viz = None
+                    except:
+                        centers_viz = None
+                else:
+                    centers_viz = None
+                
+                # Store clustering visualization data
+                results["clustering_visualization"] = {
+                    "points": X_viz.tolist() if X_viz is not None else [],
+                    "labels": cluster_labels if cluster_labels else [],
+                    "centers": centers_viz.tolist() if centers_viz is not None else [],
+                    "dimensions": viz_dims,
+                    "original_features": n_features,
+                    "explained_variance": explained_var,
+                }
+        except Exception as e:
+            logger.warning(f"Could not create clustering visualization data: {e}")
 
     # -------------------------------------------------------
     # 6) FEATURE IMPORTANCE EXTRACTION

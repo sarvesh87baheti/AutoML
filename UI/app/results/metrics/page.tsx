@@ -152,6 +152,13 @@ export default function MetricsPage() {
     return modelResult?.confusion_matrix
   }, [data?.results, bestModelName, isClassification, isImageClassification])
 
+  const clusteringVisualizationData = useMemo(() => {
+    if (isKMeans) {
+      return data?.results?.clustering_visualization
+    }
+    return null
+  }, [data?.results, isKMeans])
+
   const handleShare = () => {
     const text = `I trained models using EasyFlow ML! Best model: ${bestModelName}`
     navigator.clipboard.writeText(text)
@@ -278,6 +285,95 @@ export default function MetricsPage() {
                   <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* KMEANS CLUSTERING VISUALIZATION */}
+        {isKMeans && clusteringVisualizationData && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cluster Visualization</CardTitle>
+              <CardDescription>
+                {clusteringVisualizationData.dimensions === 2
+                  ? "2D visualization of clusters (PCA reduced from " + clusteringVisualizationData.original_features + " features)"
+                  : clusteringVisualizationData.dimensions === 3
+                  ? "3D visualization of clusters"
+                  : "Cluster distribution"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {clusteringVisualizationData.dimensions === 2 && (
+                <div>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        type="number"
+                        dataKey="x"
+                        name="PC1"
+                        label={{ value: clusteringVisualizationData.explained_variance ? `PC1 (${(clusteringVisualizationData.explained_variance[0] * 100).toFixed(1)}%)` : "PC1", position: "insideBottomRight", offset: -5 }}
+                      />
+                      <YAxis
+                        type="number"
+                        dataKey="y"
+                        name="PC2"
+                        label={{ value: clusteringVisualizationData.explained_variance ? `PC2 (${(clusteringVisualizationData.explained_variance[1] * 100).toFixed(1)}%)` : "PC2", angle: -90, position: "insideLeft" }}
+                      />
+                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                      <Legend />
+                      {Array.from(new Set(clusteringVisualizationData.labels)).map((cluster: any, idx: number) => {
+                        const colors = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"]
+                        const clusterPoints = clusteringVisualizationData.points
+                          ?.map((point: number[], i: number) => ({
+                            x: point[0],
+                            y: point[1],
+                            cluster: clusteringVisualizationData.labels[i],
+                          }))
+                          .filter((p: any) => p.cluster === cluster) || []
+                        return (
+                          <Scatter
+                            key={`cluster-${cluster}`}
+                            name={`Cluster ${cluster}`}
+                            data={clusterPoints}
+                            fill={colors[idx % colors.length]}
+                          />
+                        )
+                      })}
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                  {clusteringVisualizationData.centers && clusteringVisualizationData.centers.length > 0 && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
+                      <p className="font-semibold mb-2">Cluster Centers (in PCA space):</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {clusteringVisualizationData.centers.map((center: number[], idx: number) => (
+                          <div key={idx} className="p-2 bg-white rounded border">
+                            <span className="font-medium">C{idx}:</span> ({center[0]?.toFixed(2)}, {center[1]?.toFixed(2)})
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {clusteringVisualizationData.dimensions === 3 && (
+                <div className="p-4 bg-gray-50 rounded-md text-center">
+                  <p className="text-gray-600 mb-2">3D cluster visualization (requires interactive view)</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    {Array.from(new Set(clusteringVisualizationData.labels)).map((cluster: any, idx: number) => {
+                      const clusterPoints = clusteringVisualizationData.points?.filter(
+                        (_: any, i: number) => clusteringVisualizationData.labels[i] === cluster
+                      ) || []
+                      return (
+                        <div key={`cluster-${cluster}`} className="p-3 border rounded-md">
+                          <div className="text-lg font-semibold">Cluster {cluster}</div>
+                          <div className="text-sm text-gray-600">{clusterPoints.length} points</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

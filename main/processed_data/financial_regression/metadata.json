@@ -1,15 +1,9 @@
 {
-    "problem_type": "regression",
-    "target": "gold volume",
-    "n_features": 14,
-    "train_samples": 959,
-    "val_samples": 240,
+    "problem_type": "kmeans_clustering",
+    "n_features": 46,
+    "train_samples": 1199,
     "feature_matrix_format": "dense_npy",
-    "categorical_cols": [],
-    "text_cols": [
-        "date"
-    ],
-    "numeric_cols": [
+    "feature_names": [
         "sp500 open",
         "sp500 high",
         "sp500 low",
@@ -54,12 +48,10 @@
         "gold open",
         "gold high",
         "gold low",
-        "gold close"
+        "gold close",
+        "gold volume"
     ],
-    "encoders": [],
-    "vectorizers": [
-        "date"
-    ],
-    "scaler_present": true,
-    "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
+    "pca_applied": false,
+    "n_clusters": 5,
+    "notes": "K-means clustering mode: feature matrix saved without target variable."
 }
