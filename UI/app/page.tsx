@@ -3,7 +3,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Zap, Database, Settings } from "lucide-react"
+import { BarChart3, Zap, Database, Settings, ImageIcon } from "lucide-react"
 
 export default function Home() {
   return (
@@ -21,9 +21,9 @@ export default function Home() {
 
           <p className="max-w-[700px] text-lg text-muted-foreground md:text-xl">
             EasyFlow ML is an automated machine learning platform built for everyone. Simply upload your dataset, choose
-            your problem type — classification, regression, or clustering — and EasyFlow ML automatically cleans your
-            data, trains multiple models, compares performance, and delivers the best model in minutes. No coding. No ML
-            expertise. Just results.
+            your problem type — classification, regression, clustering, or image classification — and EasyFlow ML
+            automatically cleans your data, trains multiple models, compares performance, and delivers the best model in
+            minutes. No coding. No ML expertise. Just results.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -40,7 +40,7 @@ export default function Home() {
       {/* FEATURES SECTION - Showcase key capabilities of EasyFlow ML */}
       <section className="container py-16 md:py-24">
         <h2 className="text-3xl font-bold tracking-tighter text-center mb-12 sm:text-4xl">Powerful AutoML Features</h2>
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
           {/* FEATURE 1: Smart Model Selection */}
           <div className="flex flex-col items-center text-center p-6 rounded-lg border bg-card">
             <div className="rounded-full bg-gradient-to-br from-violet-600/20 via-blue-500/20 to-teal-400/20 p-3 mb-4">
@@ -77,7 +77,19 @@ export default function Home() {
             </p>
           </div>
 
-          {/* FEATURE 4: Model Evaluation & Leaderboard */}
+          {/* FEATURE 4: Image Classification */}
+          <div className="flex flex-col items-center text-center p-6 rounded-lg border bg-card">
+            <div className="rounded-full bg-gradient-to-br from-orange-500/20 via-amber-500/20 to-yellow-400/20 p-3 mb-4">
+              <ImageIcon className="h-6 w-6 text-orange-500" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Offline Image Classification</h3>
+            <p className="text-muted-foreground">
+              Upload a ZIP of class-based image folders and compare transfer-learning models like MobileNet,
+              EfficientNet, and ResNet in one guided workflow.
+            </p>
+          </div>
+
+          {/* FEATURE 5: Model Evaluation & Leaderboard */}
           <div className="flex flex-col items-center text-center p-6 rounded-lg border bg-card">
             <div className="rounded-full bg-gradient-to-br from-violet-600/20 via-blue-500/20 to-teal-400/20 p-3 mb-4">
               <Zap className="h-6 w-6 text-teal-400" />

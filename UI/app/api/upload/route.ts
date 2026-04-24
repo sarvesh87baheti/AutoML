@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     const problem_type = (form.get("problem_type") as string | null) || undefined;
     const target_col = (form.get("target_col") as string | null) || undefined;
     const k_value = (form.get("k") as string | null) || undefined;
+    const image_mode = (form.get("image_mode") as string | null) || undefined;
 
     if (!file) {
       return NextResponse.json({ success: false, error: { code: "NO_FILE", message: "No file uploaded" } }, { status: 400 });
@@ -31,6 +32,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { code: "INVALID_PROBLEM_TYPE", message: "Invalid problem type specified" } }, { status: 400 });
     }
 
+    if (problem_type === "image_classification" && image_mode && !["light", "standard"].includes(image_mode)) {
+      return NextResponse.json({ success: false, error: { code: "INVALID_IMAGE_MODE", message: "Invalid image training mode specified" } }, { status: 400 });
+    }
+
     // Save uploaded file to workspace `uploaded_files/`
     const workspaceRoot = path.resolve(process.cwd(), "..");
     const uploadDir = path.join(workspaceRoot, "uploaded_files");
@@ -41,8 +46,6 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     await fs.writeFile(savePath, Buffer.from(arrayBuffer));
 
-    // Invoke Python runner.py with args
-    const pythonPath = "python"; // assumes python is on PATH
     const runnerPath = path.join(workspaceRoot, "runner.py");
 
     const args: string[] = [runnerPath, "--file", savePath, "--problem", problem_type || "regression", "--json"];
@@ -52,8 +55,11 @@ export async function POST(req: Request) {
     if (k_value) {
       args.push("--k", k_value);
     }
+    if (image_mode) {
+      args.push("--image-mode", image_mode);
+    }
 
-    const result = await runPython(pythonPath, args);
+    const result = await runPython(args);
 
     if (result && result.success === false) {
       const userErrorCodes = new Set([
@@ -66,7 +72,8 @@ export async function POST(req: Request) {
         "NO_FILE",
         "K_REQUIRED",
         "K_INVALID",
-        "INVALID_PROBLEM_TYPE"
+        "INVALID_PROBLEM_TYPE",
+        "INVALID_IMAGE_MODE"
       ]);
       const status = userErrorCodes.has(result.error?.code) ? 400 : 500;
       return NextResponse.json(result, { status });
@@ -80,10 +87,16 @@ export async function POST(req: Request) {
 
 function parsePythonError(stderr: string) {
   const text = stderr || "";
-  const lower = text.toLowerCase();
   let code = "PYTHON_ERROR";
   let message = text.trim() || "Unknown Python error";
 
+  if (text.includes("spawn python ENOENT") || text.includes("spawn python3 ENOENT") || text.includes("spawn py ENOENT")) {
+    code = "PYTHON_NOT_FOUND";
+    message = "Python was not found on the server. Install Python and make sure `python3` or `python` is available on PATH.";
+  } else if (text.includes("terminated by signal SIGKILL")) {
+    code = "PROCESS_KILLED";
+    message = "Training was stopped by the operating system, likely due to high memory usage. Try a smaller image dataset or the lighter default image models.";
+  } else
   if (text.includes("Target column") && text.includes("not found")) {
     code = "TARGET_COLUMN_NOT_FOUND";
     const match = text.match(/Target column '([^']+)'/);
@@ -116,42 +129,74 @@ function parsePythonError(stderr: string) {
   } else if (text.includes("Unsupported problem type")) {
     code = "INVALID_PROBLEM_TYPE";
     message = "Invalid problem type specified.";
+  } else if (text.includes("Unsupported image mode")) {
+    code = "INVALID_IMAGE_MODE";
+    message = "Invalid image training mode specified.";
   }
 
   return { success: false, error: { code, message, raw: text } };
 }
 
-function runPython(pythonCmd: string, args: string[]): Promise<any> {
+function spawnOnce(pythonCmd: string, args: string[]): Promise<any> {
   return new Promise((resolve) => {
-    let proc = spawn(pythonCmd, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const proc = spawn(pythonCmd, args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
+    let settled = false;
 
-    const attach = () => {
-      proc.stdout.on("data", (d) => (stdout += d.toString()));
-      proc.stderr.on("data", (d) => (stderr += d.toString()));
-      proc.on("error", (e: any) => {
-        if (e?.code === "ENOENT" && pythonCmd === "python") {
-          proc.removeAllListeners();
-          proc.kill();
-          proc = spawn("py", args, { stdio: ["ignore", "pipe", "pipe"] });
-          attach();
-        } else {
-          resolve(parsePythonError(e?.message || String(e)));
-        }
+    proc.stdout.on("data", (d) => (stdout += d.toString()));
+    proc.stderr.on("data", (d) => (stderr += d.toString()));
+
+    proc.on("error", (e: any) => {
+      if (settled) return;
+      settled = true;
+      resolve({
+        success: false,
+        error: {
+          code: e?.code || "SPAWN_ERROR",
+          message: e?.message || String(e),
+          raw: e?.stack || String(e),
+        },
       });
-      proc.on("close", (code) => {
-        if (code !== 0) {
-          return resolve(parsePythonError(stderr || `runner.py exited with code ${code}`));
-        }
-        try {
-          const parsed = JSON.parse(stdout.trim());
-          resolve(parsed);
-        } catch {
-          resolve({ success: true, data: { message: "AutoML process completed", raw: stdout } });
-        }
-      });
-    };
-    attach();
+    });
+
+    proc.on("close", (code, signal) => {
+      if (settled) return;
+      settled = true;
+
+      if (code !== 0) {
+        const failureText =
+          stderr ||
+          (signal
+            ? `runner.py was terminated by signal ${signal}`
+            : `runner.py exited with code ${String(code)}`);
+        return resolve(parsePythonError(failureText));
+      }
+
+      try {
+        const parsed = JSON.parse(stdout.trim());
+        resolve(parsed);
+      } catch {
+        resolve({ success: true, data: { message: "AutoML process completed", raw: stdout } });
+      }
+    });
   });
+}
+
+async function runPython(args: string[]): Promise<any> {
+  const pythonCommands = ["python", "python3", "py"];
+  let lastError: any = null;
+
+  for (const pythonCmd of pythonCommands) {
+    const result = await spawnOnce(pythonCmd, args);
+
+    if (result?.success === false && result?.error?.code === "ENOENT") {
+      lastError = result;
+      continue;
+    }
+
+    return result;
+  }
+
+  return parsePythonError(lastError?.error?.message || "Python executable not found");
 }

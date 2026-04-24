@@ -44,8 +44,9 @@ export default function AboutPage() {
               <p>
                 We leverage advanced machine learning algorithms, ensemble methods, and automated machine learning
                 (AutoML) techniques to analyze your data and build optimal models. Our intelligent pipeline
-                automatically handles feature engineering, model selection across multiple algorithms, and
-                hyperparameter optimization to deliver the best results for your specific problem.
+                automatically handles feature engineering, model selection across multiple algorithms, transfer learning
+                for image datasets, and hyperparameter optimization to deliver the best results for your specific
+                problem.
               </p>
             </CardContent>
           </Card>
@@ -63,8 +64,9 @@ export default function AboutPage() {
               <div>
                 <h3 className="text-xl font-medium mb-2">Upload Your Data</h3>
                 <p className="text-muted-foreground">
-                  Upload your raw dataset in CSV or Excel format. Our system automatically validates and prepares your
-                  data for modeling.
+                  Upload your raw dataset in CSV or Excel format for tabular ML, or a ZIP file of class-based image
+                  folders for image classification. Our system automatically validates and prepares your data for
+                  modeling.
                 </p>
               </div>
             </div>
@@ -77,8 +79,9 @@ export default function AboutPage() {
               <div>
                 <h3 className="text-xl font-medium mb-2">Choose Your Problem Type</h3>
                 <p className="text-muted-foreground">
-                  Select from classification, regression, or clustering based on your business goal. Specify your target
-                  column for supervised learning tasks.
+                  Select from classification, regression, clustering, or image classification based on your goal.
+                  Specify your target column for supervised tabular tasks, or let folder names define classes for image
+                  datasets.
                 </p>
               </div>
             </div>

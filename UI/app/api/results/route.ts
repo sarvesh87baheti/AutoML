@@ -36,10 +36,11 @@ export async function GET() {
     // Prefer explicit problem_type from the stored summary, fallback to metadata from processed data
     let problem_type: string | undefined = summary?.problem_type;
     const metaPath = path.join(workspaceRoot, "main", "processed_data", latest.dataset, "metadata.json");
+    let metadata: Record<string, any> | undefined;
     try {
       const metaRaw = await fs.readFile(metaPath, "utf-8");
-      const meta = JSON.parse(metaRaw);
-      if (meta?.problem_type) problem_type = meta.problem_type;
+      metadata = JSON.parse(metaRaw);
+      if (metadata?.problem_type) problem_type = metadata.problem_type;
     } catch {}
 
     if (!problem_type && Object.prototype.hasOwnProperty.call(payload, "image_classification")) {
@@ -53,9 +54,10 @@ export async function GET() {
       feature_importance: summary?.feature_importance ?? payload?.feature_importance,
       problem_type: problem_type ?? payload?.problem_type,
       dataset_name: summary?.dataset_name ?? payload?.dataset_name,
+      image_mode: summary?.image_mode ?? payload?.image_mode,
     };
 
-    return NextResponse.json({ dataset: latest.dataset, problem_type, results });
+    return NextResponse.json({ dataset: latest.dataset, problem_type, metadata, results });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
   }
