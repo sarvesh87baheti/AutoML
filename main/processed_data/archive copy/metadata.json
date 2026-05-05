@@ -1,0 +1,24 @@
+{
+  "problem_type": "image_classification",
+  "class_names": [
+    "cane",
+    "cavallo",
+    "elefante",
+    "farfalla",
+    "gallina",
+    "gatto",
+    "mucca",
+    "pecora",
+    "ragno",
+    "scoiattolo"
+  ],
+  "num_classes": 10,
+  "train_size": 11780,
+  "val_size": 3927,
+  "test_size": 10472,
+  "batch_size": 16,
+  "img_size": [
+    224,
+    224
+  ]
+}
