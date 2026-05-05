@@ -1,10 +1,28 @@
 {
-    "problem_type": "kmeans_clustering",
-    "n_features": 14,
-    "train_samples": 161,
+    "problem_type": "classification",
+    "target": "class",
+    "n_features": 13,
+    "train_samples": 128,
+    "val_samples": 33,
     "feature_matrix_format": "dense_npy",
+    "categorical_cols": [],
+    "text_cols": [],
+    "numeric_cols": [
+        "Alcohol",
+        "Malic acid",
+        "Ash",
+        "Alcalinity of ash",
+        "Magnesium",
+        "Total phenols",
+        "Flavanoids",
+        "Nonflavanoid phenols",
+        "Proanthocyanins",
+        "Color intensity",
+        "Hue",
+        "OD280/OD315 of diluted wines",
+        "Proline "
+    ],
     "feature_names": [
-        "class",
         "Alcohol",
         "Malic acid",
         "Ash",
@@ -20,6 +38,10 @@
         "Proline "
     ],
     "pca_applied": false,
-    "n_clusters": 3,
-    "notes": "K-means clustering mode: feature matrix saved without target variable."
+    "encoders": [
+        "target"
+    ],
+    "vectorizers": [],
+    "scaler_present": true,
+    "notes": "Encoders are kept in memory; no vectorizers are used."
 }

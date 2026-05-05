@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 from pathlib import Path
 from typing import Dict, Any
 
@@ -25,9 +26,14 @@ class ClassificationTrainer:
             if f.name in ("__init__.py", "base.py", "utils.py"):
                 continue
 
-            spec = importlib.util.spec_from_file_location(f.stem, f)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            try:
+                spec = importlib.util.spec_from_file_location(f.stem, f)
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[f.stem] = module
+                spec.loader.exec_module(module)
+            except Exception as exc:
+                print(f"⚠️ Skipping {f.name}: import failed ({exc})")
+                continue
 
             ok, reason = validate_module(module)
             if not ok:
@@ -60,13 +66,17 @@ class ClassificationTrainer:
             model_obj = ModelClass()
             print(f"🚀 Training {model_name}...")
 
-            pipe, metrics, metadata = model_obj.train_model(
-                X_train=X_train,
-                y_train=y_train,
-                X_val=X_val,
-                y_val=y_val,
-                save_path=save_path
-            )
+            try:
+                pipe, metrics, metadata = model_obj.train_model(
+                    X_train=X_train,
+                    y_train=y_train,
+                    X_val=X_val,
+                    y_val=y_val,
+                    save_path=save_path
+                )
+            except Exception as exc:
+                print(f"⚠️ Skipping {model_name}: training failed ({exc})")
+                continue
 
             results[model_name] = {
                 "metrics": metrics,

@@ -39,4 +39,10 @@ During an upload, the file is saved under the workspace `uploaded_files/` folder
 
 - If the Next API cannot find Python, ensure `python` is resolvable on PATH. You can change the command in `UI/app/api/upload/route.ts`.
 - Large files: consider setting platform upload limits and monitoring execution time of `runner.py`.
+
+### Optional Quantum Classification
+
+- The classification pipeline now includes an optional `quantum_classifier` model in [main/model_scripts/quantum_classifier.py](/Users/akanshakasapogu/Documents/BTP/AutoML/main/model_scripts/quantum_classifier.py).
+- To actually train that model, install the quantum dependencies used by the imported project: `qiskit`, `qiskit-machine-learning`, and `qiskit-algorithms`.
+- If those packages are not installed, the pipeline will skip the quantum model and continue training the classical models.
 A pipeline to automate generation of trained ML models
