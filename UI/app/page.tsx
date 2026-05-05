@@ -1,6 +1,5 @@
 // FILE PURPOSE: Homepage for EasyFlow ML - Landing page with hero, features, and CTA sections
 // Showcases the main value proposition and directs users to start building models
-
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BarChart3, Zap, Database, Settings, ImageIcon } from "lucide-react"

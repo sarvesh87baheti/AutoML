@@ -1,5 +1,4 @@
 // FILE PURPOSE: About page - Information about EasyFlow ML, mission, and how it works
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2 } from "lucide-react"
 import Link from "next/link"

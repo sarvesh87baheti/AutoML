@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
@@ -30,34 +31,24 @@ export async function GET() {
     if (!latest) return NextResponse.json({ error: "No training results found" }, { status: 404 });
 
     const summaryRaw = await fs.readFile(latest.file, "utf-8");
-    const summary = JSON.parse(summaryRaw);
-    const payload = summary?.results ?? summary;
+    const results = JSON.parse(summaryRaw);
 
-    // Prefer explicit problem_type from the stored summary, fallback to metadata from processed data
-    let problem_type: string | undefined = summary?.problem_type;
+    // Try to read problem_type from processed metadata
     const metaPath = path.join(workspaceRoot, "main", "processed_data", latest.dataset, "metadata.json");
+    let problem_type: string | undefined;
     let metadata: Record<string, any> | undefined;
     try {
       const metaRaw = await fs.readFile(metaPath, "utf-8");
       metadata = JSON.parse(metaRaw);
-      if (metadata?.problem_type) problem_type = metadata.problem_type;
+      problem_type = metadata?.problem_type;
     } catch {}
 
-    if (!problem_type && Object.prototype.hasOwnProperty.call(payload, "image_classification")) {
-      problem_type = "image_classification"
-    }
-
-    const results = {
-      ...payload,
-      best_model: summary?.best_model ?? payload?.best_model,
-      model_scores: summary?.model_scores ?? payload?.model_scores,
-      feature_importance: summary?.feature_importance ?? payload?.feature_importance,
-      problem_type: problem_type ?? payload?.problem_type,
-      dataset_name: summary?.dataset_name ?? payload?.dataset_name,
-      image_mode: summary?.image_mode ?? payload?.image_mode,
-    };
-
-    return NextResponse.json({ dataset: latest.dataset, problem_type, metadata, results });
+    return NextResponse.json({
+      dataset: latest.dataset,
+      problem_type: problem_type ?? results?.problem_type,
+      metadata,
+      results,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
   }

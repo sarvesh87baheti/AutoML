@@ -2,23 +2,22 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Download, Share2, Trophy, Layers3, ImageIcon } from "lucide-react"
+import { ArrowLeft, BarChart3, Download, ImageIcon, Layers3, Share2, Trophy } from "lucide-react"
 import {
   ResponsiveContainer,
   BarChart,
   Bar,
   CartesianGrid,
   Tooltip,
-  Legend,
-  ScatterChart,
-  Scatter,
   XAxis,
   YAxis,
   LineChart,
-  Line
+  Line,
+  Legend,
 } from "recharts"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 type ResultsPayload = {
@@ -37,7 +36,7 @@ type ComparisonModel = {
 }
 
 function useLatestResults() {
-  const [resultsData, setResultsData] = useState<ResultsPayload | null>(null)
+  const [data, setData] = useState<ResultsPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,7 +47,7 @@ function useLatestResults() {
         const res = await fetch("/api/results", { cache: "no-store" })
         const json = await res.json()
         if (!res.ok) throw new Error(json?.error || "Failed to fetch results")
-        if (mounted) setResultsData(json)
+        if (mounted) setData(json)
       } catch (e: any) {
         if (mounted) setError(e?.message || "Failed to fetch results")
       } finally {
@@ -61,7 +60,7 @@ function useLatestResults() {
     }
   }, [])
 
-  return {resultsData, loading, error }
+  return { data, loading, error }
 }
 
 function prettyModelName(name: string) {
@@ -79,43 +78,108 @@ function formatCompactNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value.toLocaleString() : "N/A"
 }
 
+function buildExportPayload(args: {
+  dataset?: string
+  problemType?: string
+  bestModelName: string
+  metadata?: Record<string, any>
+  accuracyData: any[]
+  isKMeans: boolean
+  isImageClassification: boolean
+  kmeansTrainMetrics: any
+  imageClassificationData: any
+}) {
+  const {
+    dataset,
+    problemType,
+    bestModelName,
+    metadata,
+    accuracyData,
+    isKMeans,
+    isImageClassification,
+    kmeansTrainMetrics,
+    imageClassificationData,
+  } = args
+
+  if (isImageClassification) {
+    const failedModels = Array.isArray(imageClassificationData?.failedModels)
+      ? imageClassificationData.failedModels.map((item: { name: string; error: string }) => ({
+          model: prettyModelName(item.name),
+          error: item.error,
+        }))
+      : []
+
+    return {
+      dataset,
+      problemType,
+      status: imageClassificationData?.hasSuccessfulModels ? "success" : "failed",
+      imageMode: metadata?.image_mode,
+      bestModel: imageClassificationData?.hasSuccessfulModels ? prettyModelName(bestModelName) : null,
+      metrics: imageClassificationData?.hasSuccessfulModels
+        ? {
+            accuracy: imageClassificationData?.accuracy ?? null,
+            loss: imageClassificationData?.loss ?? null,
+            precision: imageClassificationData?.weightedAvg?.precision ?? null,
+            recall: imageClassificationData?.weightedAvg?.recall ?? null,
+            f1Score: imageClassificationData?.weightedAvg?.["f1-score"] ?? null,
+            macroF1Score: imageClassificationData?.macroAvg?.["f1-score"] ?? null,
+            weightedAverage: imageClassificationData?.weightedAvg ?? null,
+            macroAverage: imageClassificationData?.macroAvg ?? null,
+          }
+        : null,
+      classes: imageClassificationData?.classNames ?? [],
+      datasetSnapshot: imageClassificationData?.datasetSnapshot ?? {},
+      modelComparison: Array.isArray(imageClassificationData?.comparison)
+        ? imageClassificationData.comparison.map((item: ComparisonModel) => ({
+            model: prettyModelName(item.name),
+            accuracy: item.value ?? null,
+            loss: item.loss ?? null,
+            trainingTimeSeconds: item.time ?? null,
+            modelSizeMb: item.size_mb ?? null,
+          }))
+        : [],
+      errors: failedModels,
+    }
+  }
+
+  return {
+    dataset,
+    problemType,
+    bestModel: bestModelName,
+    metadata,
+    comparison: !isKMeans ? accuracyData : undefined,
+    clusteringMetrics: isKMeans ? kmeansTrainMetrics : undefined,
+  }
+}
+
 export default function MetricsPage() {
-  const { resultsData, loading, error } = useLatestResults()
+  const { data, loading, error } = useLatestResults()
 
   const problemType = useMemo(() => {
-    if (resultsData?.problem_type) return resultsData.problem_type
-    if (resultsData?.results?.kmeans?.metrics) return "kmeans_clustering"
-    if (resultsData?.results?.image_classification?.metrics) return "image_classification"
+    if (data?.problem_type) return data.problem_type
+    if (data?.results?.kmeans?.metrics) return "kmeans_clustering"
+    if (data?.results?.image_classification?.metrics) return "image_classification"
     return undefined
-  }, [resultsData])
+  }, [data])
 
   const isRegression = problemType === "regression"
-  const isClassification = problemType === "classification" || problemType === "image_classification"
+  const isClassification = problemType === "classification"
   const isKMeans = problemType === "kmeans_clustering"
   const isImageClassification = problemType === "image_classification"
   const imageMode = isImageClassification
-    ? resultsData?.metadata?.image_mode ?? resultsData?.results?.image_mode ?? "standard"
+    ? data?.metadata?.image_mode ?? data?.results?.image_mode ?? "standard"
     : undefined
   const isLightMode = imageMode === "light"
 
-  const imageClassificationMetrics = useMemo(() => {
-    if (!isImageClassification) return null
-    const raw = resultsData?.results?.image_classification?.metrics
-    return raw?.val || raw?.train || raw?.test || null
-  }, [resultsData, isImageClassification])
-
   const modelMetrics = useMemo(() => {
     const arr: { name: string; metrics: any }[] = []
-    const resultMap = resultsData?.results || {}
+    const resultMap = data?.results || {}
     for (const [name, value] of Object.entries<any>(resultMap)) {
       const metrics = value?.metrics?.val || value?.metrics?.train
       if (metrics) arr.push({ name, metrics })
     }
-    if (!arr.length && imageClassificationMetrics) {
-      arr.push({ name: "image_classification", metrics: imageClassificationMetrics })
-    }
     return arr
-  }, [resultsData, imageClassificationMetrics])
+  }, [data])
 
   const accuracyData = useMemo(() => {
     if (isImageClassification) return []
@@ -132,11 +196,11 @@ export default function MetricsPage() {
 
   const bestModelName = useMemo(() => {
     if (isImageClassification) {
-      return resultsData?.results?.best_model ?? "No successful models"
+      return data?.results?.best_model ?? "No successful models"
     }
-    if (isKMeans) return resultsData?.results?.best_model ?? modelMetrics[0]?.name ?? "kmeans"
-    return accuracyData[0]?.name ?? resultsData?.results?.best_model ?? "N/A"
-  }, [accuracyData, resultsData?.results, isKMeans, modelMetrics])
+    if (isKMeans) return data?.results?.best_model ?? modelMetrics[0]?.name ?? "kmeans"
+    return accuracyData[0]?.name ?? data?.results?.best_model ?? "N/A"
+  }, [accuracyData, data?.results, isImageClassification, isKMeans, modelMetrics])
 
   const avgMetric = useMemo(() => {
     if (!accuracyData.length) return 0
@@ -145,12 +209,12 @@ export default function MetricsPage() {
 
   const kmeansTrainMetrics = useMemo(() => {
     if (!isKMeans) return null
-    const raw = resultsData?.results?.kmeans?.metrics
+    const raw = data?.results?.kmeans?.metrics
     return raw?.train || raw?.val || null
-  }, [resultsData, isKMeans])
+  }, [data, isKMeans])
 
   const featureImportance = useMemo(() => {
-    const raw = resultsData?.results?.feature_importance
+    const raw = data?.results?.feature_importance
     if (!Array.isArray(raw)) return []
     return raw
       .filter(
@@ -160,45 +224,27 @@ export default function MetricsPage() {
           item.feature.length > 0
       )
       .slice(0, 10)
-  }, [resultsData?.results])
+  }, [data?.results])
 
   const classificationBestMetrics = useMemo(() => {
     if (!isClassification) return null
-    const best = resultsData?.results?.[bestModelName]
+    const best = data?.results?.[bestModelName]
     return best?.metrics?.val || best?.metrics?.train || null
-  }, [bestModelName, resultsData?.results, isClassification])
+  }, [bestModelName, data?.results, isClassification])
 
   const regressionSeries = useMemo(() => {
     if (!isRegression) return []
-    const best = resultsData?.results?.[bestModelName]
+    const best = data?.results?.[bestModelName]
     const preds = best?.val_predictions
     const actual = best?.val_actual
-    if (!preds || !actual) return []
-    const out: any[] = []
-    for (let i = 0; i < Math.min(preds.length, actual.length); i++) {
-      out.push({ index: i, actual: actual[i], predicted: preds[i] })
-    }
-    return out
-  }, [resultsData?.results, bestModelName, problemType])
+    if (!Array.isArray(preds) || !Array.isArray(actual)) return []
 
-  const confusionMatrixData = useMemo(() => {
-    if (!isClassification) return null
-    if (isImageClassification) {
-      return resultsData?.results?.image_classification?.confusion_matrix
-    }
-    // For regular classification, confusion matrix may be in model results
-    const modelResult = resultsData?.results?.[bestModelName]
-    return modelResult?.confusion_matrix
-  }, [resultsData?.results, bestModelName, isClassification, isImageClassification])
-
-  const clusteringVisualizationData = useMemo(() => {
-    if (isKMeans) {
-      return resultsData?.results?.clustering_visualization
-    }
-    return null
-  }, [resultsData?.results, isKMeans])
-
-
+    return actual.slice(0, Math.min(actual.length, preds.length)).map((value: number, index: number) => ({
+      index,
+      actual: value,
+      predicted: preds[index],
+    }))
+  }, [bestModelName, data?.results, isRegression])
 
   const classificationComparisonRows = useMemo(() => {
     if (!isClassification) return []
@@ -215,13 +261,13 @@ export default function MetricsPage() {
   const imageClassificationData = useMemo(() => {
     if (!isImageClassification) return null
 
-    const raw = resultsData?.results?.image_classification
+    const raw = data?.results?.image_classification
     const comparison: ComparisonModel[] = Array.isArray(raw?.models_comparison) ? raw.models_comparison : []
     const allModels = raw?.all_models || {}
-    const classNames = Array.isArray(resultsData?.metadata?.class_names)
-      ? resultsData?.metadata?.class_names
-      : Array.isArray(resultsData?.results?.class_names)
-      ? resultsData?.results?.class_names
+    const classNames = Array.isArray(data?.metadata?.class_names)
+      ? data?.metadata?.class_names
+      : Array.isArray(data?.results?.class_names)
+      ? data?.results?.class_names
       : []
 
     const failedModels = Object.entries<any>(allModels)
@@ -238,7 +284,7 @@ export default function MetricsPage() {
       }))
       .filter((item: any) => item.metrics)
 
-    const confusionMatrixUrl = resultsData?.dataset ? `/api/results/confusion-matrix?dataset=${encodeURIComponent(resultsData.dataset)}` : null
+    const confusionMatrixUrl = data?.dataset ? `/api/results/confusion-matrix?dataset=${encodeURIComponent(data.dataset)}` : null
 
     return {
       accuracy:
@@ -253,35 +299,37 @@ export default function MetricsPage() {
       failedModels,
       confusionMatrixUrl,
       datasetSnapshot: {
-        trainSize: resultsData?.metadata?.train_size,
-        valSize: resultsData?.metadata?.val_size,
-        testSize: resultsData?.metadata?.test_size,
-        numClasses: resultsData?.metadata?.num_classes ?? resultsData?.results?.num_classes,
-        batchSize: resultsData?.metadata?.batch_size,
-        imageSize: Array.isArray(resultsData?.metadata?.img_size) ? resultsData?.metadata?.img_size.join(" x ") : null,
+        trainSize: data?.metadata?.train_size,
+        valSize: data?.metadata?.val_size,
+        testSize: data?.metadata?.test_size,
+        numClasses: data?.metadata?.num_classes ?? data?.results?.num_classes,
+        batchSize: data?.metadata?.batch_size,
+        imageSize: Array.isArray(data?.metadata?.img_size) ? data?.metadata?.img_size.join(" x ") : null,
       },
       hasSuccessfulModels: comparison.length > 0,
       weightedAvg: raw?.classification_report?.["weighted avg"],
       macroAvg: raw?.classification_report?.["macro avg"],
     }
-  }, [resultsData, isImageClassification])
+  }, [data, isImageClassification])
 
   const handleShare = async () => {
-    const message = `EasyFlow ML result: ${prettyModelName(bestModelName)} on ${resultsData?.dataset || "dataset"}`
+    const message = `EasyFlow ML result: ${prettyModelName(bestModelName)} on ${data?.dataset || "dataset"}`
     await navigator.clipboard.writeText(message)
     window.alert("Summary copied to clipboard.")
   }
 
   const handleExportReport = () => {
-    const payload = {
-      dataset: resultsData?.dataset,
-      problem_type: problemType,
+    const payload = buildExportPayload({
+      dataset: data?.dataset,
+      problemType,
       bestModelName,
-      metadata: resultsData?.metadata,
-      comparison: !isKMeans && !isImageClassification ? accuracyData : undefined,
-      clustering_metrics: isKMeans ? kmeansTrainMetrics : undefined,
-      image_classification_metrics: isImageClassification ? imageClassificationData : undefined,
-    }
+      metadata: data?.metadata,
+      accuracyData,
+      isKMeans,
+      isImageClassification,
+      kmeansTrainMetrics,
+      imageClassificationData,
+    })
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -318,18 +366,6 @@ export default function MetricsPage() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold">Model Performance Metrics</h1>
-        <p className="text-muted-foreground">
-          {isKMeans
-            ? "Clustering quality metrics for the trained model"
-            : isImageClassification
-            ? "Image classification model performance and evaluation metrics"
-            : "Evaluation of all trained models with comparison charts"}
-        </p>
-
-        {/* SUMMARY CARDS */}
-        {!isKMeans ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div
           className={isImageClassification
             ? "rounded-3xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-background p-6"
@@ -344,7 +380,7 @@ export default function MetricsPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">{resultsData?.dataset || "Latest dataset"}</Badge>
+                <Badge variant="outline">{data?.dataset || "Latest dataset"}</Badge>
                 <Badge variant="outline">
                   {isImageClassification
                     ? "Image Classification"
@@ -897,95 +933,6 @@ export default function MetricsPage() {
           </Card>
         )}
 
-        {/* KMEANS CLUSTERING VISUALIZATION */}
-        {isKMeans && clusteringVisualizationData && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Cluster Visualization</CardTitle>
-              <CardDescription>
-                {clusteringVisualizationData.dimensions === 2
-                  ? "2D visualization of clusters (PCA reduced from " + clusteringVisualizationData.original_features + " features)"
-                  : clusteringVisualizationData.dimensions === 3
-                  ? "3D visualization of clusters"
-                  : "Cluster distribution"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {clusteringVisualizationData.dimensions === 2 && (
-                <div>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        type="number"
-                        dataKey="x"
-                        name="PC1"
-                        label={{ value: clusteringVisualizationData.explained_variance ? `PC1 (${(clusteringVisualizationData.explained_variance[0] * 100).toFixed(1)}%)` : "PC1", position: "insideBottomRight", offset: -5 }}
-                      />
-                      <YAxis
-                        type="number"
-                        dataKey="y"
-                        name="PC2"
-                        label={{ value: clusteringVisualizationData.explained_variance ? `PC2 (${(clusteringVisualizationData.explained_variance[1] * 100).toFixed(1)}%)` : "PC2", angle: -90, position: "insideLeft" }}
-                      />
-                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                      <Legend />
-                      {Array.from(new Set(clusteringVisualizationData.labels)).map((cluster: any, idx: number) => {
-                        const colors = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"]
-                        const clusterPoints = clusteringVisualizationData.points
-                          ?.map((point: number[], i: number) => ({
-                            x: point[0],
-                            y: point[1],
-                            cluster: clusteringVisualizationData.labels[i],
-                          }))
-                          .filter((p: any) => p.cluster === cluster) || []
-                        return (
-                          <Scatter
-                            key={`cluster-${cluster}`}
-                            name={`Cluster ${cluster}`}
-                            data={clusterPoints}
-                            fill={colors[idx % colors.length]}
-                          />
-                        )
-                      })}
-                    </ScatterChart>
-                  </ResponsiveContainer>
-                  {clusteringVisualizationData.centers && clusteringVisualizationData.centers.length > 0 && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
-                      <p className="font-semibold mb-2">Cluster Centers (in PCA space):</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {clusteringVisualizationData.centers.map((center: number[], idx: number) => (
-                          <div key={idx} className="p-2 bg-white rounded border">
-                            <span className="font-medium">C{idx}:</span> ({center[0]?.toFixed(2)}, {center[1]?.toFixed(2)})
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {clusteringVisualizationData.dimensions === 3 && (
-                <div className="p-4 bg-gray-50 rounded-md text-center">
-                  <p className="text-gray-600 mb-2">3D cluster visualization (requires interactive view)</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    {Array.from(new Set(clusteringVisualizationData.labels)).map((cluster: any, idx: number) => {
-                      const clusterPoints = clusteringVisualizationData.points?.filter(
-                        (_: any, i: number) => clusteringVisualizationData.labels[i] === cluster
-                      ) || []
-                      return (
-                        <div key={`cluster-${cluster}`} className="p-3 border rounded-md">
-                          <div className="text-lg font-semibold">Cluster {cluster}</div>
-                          <div className="text-sm text-gray-600">{clusterPoints.length} points</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {isKMeans && (
           <Card>
             <CardHeader>
@@ -1165,83 +1112,6 @@ export default function MetricsPage() {
           </Card>
         )}
 
-        {/* CHART: Precision & Recall Comparison (Classification Only) */}
-        {isClassification && (
-          <Card>
-            <CardHeader>
-            <CardTitle>Precision & Recall Comparison</CardTitle>
-            <CardDescription>Trade-offs between true positives and false positives</CardDescription>
-            </CardHeader>
-            <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={modelMetrics.map(({ name, metrics }) => ({
-                model: name,
-                precision: metrics?.precision,
-                recall: metrics?.recall,
-              }))}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="model" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="precision" stroke="#3b82f6" strokeWidth={2} />
-            <Line type="monotone" dataKey="recall" stroke="#10b981" strokeWidth={2} />
-          </LineChart>
-          </ResponsiveContainer>
-          </CardContent>
-          </Card>
-        )}
-
-        {/* CONFUSION MATRIX (Classification Only) */}
-        {isClassification && confusionMatrixData && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Confusion Matrix</CardTitle>
-              <CardDescription>Predicted vs Actual classifications</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr>
-                      <th className="border p-2 bg-gray-100 text-left font-semibold">Actual \ Predicted</th>
-                      {confusionMatrixData.class_names?.map((className: string, idx: number) => (
-                        <th key={idx} className="border p-2 bg-gray-100 text-center font-semibold">
-                          {className}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {confusionMatrixData.matrix?.map((row: number[], rowIdx: number) => {
-                      const maxVal = Math.max(...row)
-                      return (
-                        <tr key={rowIdx}>
-                          <td className="border p-2 bg-gray-100 font-semibold">
-                            {confusionMatrixData.class_names?.[rowIdx] || `Class ${rowIdx}`}
-                          </td>
-                          {row.map((val: number, colIdx: number) => {
-                            const intensity = maxVal > 0 ? val / maxVal : 0
-                            const bgColor = intensity > 0.7 ? 'bg-green-600' : intensity > 0.4 ? 'bg-green-400' : intensity > 0 ? 'bg-yellow-300' : 'bg-gray-50'
-                            const textColor = intensity > 0.5 ? 'text-white' : 'text-gray-900'
-                            return (
-                              <td key={colIdx} className={`border p-2 text-center font-semibold ${bgColor} ${textColor}`}>
-                                {val}
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 text-xs text-muted-foreground">
-                <p>Color intensity indicates cell values: darker green = higher values</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
         {isClassification && (
           <Card>
             <CardHeader>
@@ -1290,17 +1160,15 @@ export default function MetricsPage() {
           </Card>
         )}
 
-        {/* NAVIGATION */}
         <div className="flex justify-between">
           <Link href="/build">
             <Button variant="outline">
-              <BarChart className="mr-2 h-4 w-4" />
+              <BarChart3 className="mr-2 h-4 w-4" />
               Train Another Model
             </Button>
           </Link>
         </div>
       </div>
-    
     </div>
-    )
+  )
 }
