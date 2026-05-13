@@ -199,13 +199,13 @@ export default function BuildPage() {
       } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
         // For Excel files, cannot parse in browser - headers extracted on server
         setFileColumns([])
-        setColumnsError("Excel file detected. Column names will be shown after upload.")
+        setColumnsError("Excel file detected.")
       } else if (fileName.endsWith(".zip")) {
         // For ZIP files (tabular or image), skip client-side parsing
         // Server will extract and handle appropriately
         setFileColumns([])
         if (!isImageClassification) {
-          setColumnsError("ZIP file detected. Column names will be shown after upload.")
+          setColumnsError("ZIP file detected.")
         }
       }
     }

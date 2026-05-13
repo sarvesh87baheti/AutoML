@@ -5,9 +5,12 @@
     "dogs"
   ],
   "num_classes": 2,
-  "train_size": 9,
-  "val_size": 3,
-  "test_size": 8,
+  "train_size": 16,
+  "val_size": 2,
+  "test_size": 2,
+  "train_split": 0.8,
+  "val_split": 0.1,
+  "test_split": 0.1,
   "batch_size": 16,
   "img_size": [
     224,
