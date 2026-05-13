@@ -1,249 +1,186 @@
 {
-    "decisiontree_classifier": {
+    "kmeans": {
         "metrics": {
             "train": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            },
-            "val": {
-                "accuracy": 0.9393939393939394,
-                "precision": 0.9415584415584415,
-                "recall": 0.9393939393939394,
-                "f1": 0.9393490460157126
+                "silhouette": 0.24471781616300364,
+                "calinski_harabasz": 53.994816537209424,
+                "davies_bouldin": 1.6344368135624072,
+                "inertia": 945.2784926440146
             }
         },
         "metadata": {
-            "name": "decisiontree_classifier",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "gradientboosting_classifier": {
-        "metrics": {
-            "train": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            },
-            "val": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            }
-        },
-        "metadata": {
-            "name": "gradientboosting_classifier",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "knn": {
-        "metrics": {
-            "train": {
-                "accuracy": 0.96875,
-                "precision": 0.9707264957264956,
-                "recall": 0.96875,
-                "f1": 0.9685832926233513
-            },
-            "val": {
-                "accuracy": 0.9696969696969697,
-                "precision": 0.9734848484848485,
-                "recall": 0.9696969696969697,
-                "f1": 0.9701010101010101
-            }
-        },
-        "metadata": {
-            "name": "knn",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "logistic": {
-        "metrics": {
-            "train": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            },
-            "val": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            }
-        },
-        "metadata": {
-            "name": "logistic",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "mlp_classifier": {
-        "metrics": {
-            "train": {
-                "accuracy": 0.9296875,
-                "precision": 0.9311791383219954,
-                "recall": 0.9296875,
-                "f1": 0.9301339544273635
-            },
-            "val": {
-                "accuracy": 0.9393939393939394,
-                "precision": 0.9453463203463203,
-                "recall": 0.9393939393939394,
-                "f1": 0.9384399551066217
-            }
-        },
-        "metadata": {
-            "name": "mlp_classifier",
+            "name": "kmeans",
             "hyperparams": {
-                "hidden_layer_sizes": [
-                    100,
-                    50
-                ],
-                "activation": "relu",
-                "max_iter": 500,
+                "n_clusters": 5,
                 "random_state": 42,
-                "early_stopping": true,
-                "validation_fraction": 0.1
+                "scale": true
             },
-            "train_samples": 128
-        }
+            "train_samples": 161
+        },
+        "cluster_labels": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            2,
+            4,
+            1,
+            4,
+            2,
+            2,
+            1,
+            1,
+            4,
+            4,
+            4,
+            2,
+            2,
+            1,
+            4,
+            2,
+            2,
+            4,
+            1,
+            4,
+            2,
+            1,
+            4,
+            1,
+            4,
+            1,
+            1,
+            1,
+            4,
+            4,
+            4,
+            2,
+            4,
+            4,
+            2,
+            2,
+            4,
+            2,
+            2,
+            1,
+            2,
+            1,
+            2,
+            4,
+            4,
+            1,
+            4,
+            4,
+            2,
+            4,
+            1,
+            2,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            3,
+            3,
+            3,
+            3,
+            1,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+        ]
     },
-    "naivebayes": {
-        "metrics": {
-            "train": {
-                "accuracy": 0.9921875,
-                "precision": 0.9923986486486487,
-                "recall": 0.9921875,
-                "f1": 0.9921998918529199
-            },
-            "val": {
-                "accuracy": 0.9696969696969697,
-                "precision": 0.9734848484848485,
-                "recall": 0.9696969696969697,
-                "f1": 0.9701010101010101
-            }
-        },
-        "metadata": {
-            "name": "naivebayes",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "randomforest": {
-        "metrics": {
-            "train": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            },
-            "val": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            }
-        },
-        "metadata": {
-            "name": "randomforest",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "svm": {
-        "metrics": {
-            "train": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            },
-            "val": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
-            }
-        },
-        "metadata": {
-            "name": "svm",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "best_model": "gradientboosting_classifier",
-    "model_scores": null,
-    "feature_importance": [
-        {
-            "feature": "Proline ",
-            "importance": 0.3149260611398857,
-            "percentage": 31.492606113988565
-        },
-        {
-            "feature": "Flavanoids",
-            "importance": 0.31133956681629005,
-            "percentage": 31.133956681628998
-        },
-        {
-            "feature": "Color intensity",
-            "importance": 0.2855382060685259,
-            "percentage": 28.553820606852586
-        },
-        {
-            "feature": "Malic acid",
-            "importance": 0.05246272782214461,
-            "percentage": 5.24627278221446
-        },
-        {
-            "feature": "Ash",
-            "importance": 0.01801109481149903,
-            "percentage": 1.8011094811499027
-        },
-        {
-            "feature": "Hue",
-            "importance": 0.0051925542313066625,
-            "percentage": 0.5192554231306662
-        },
-        {
-            "feature": "OD280/OD315 of diluted wines",
-            "importance": 0.0042489727394646615,
-            "percentage": 0.4248972739464661
-        },
-        {
-            "feature": "Nonflavanoid phenols",
-            "importance": 0.003779474970673608,
-            "percentage": 0.3779474970673607
-        },
-        {
-            "feature": "Total phenols",
-            "importance": 0.0014914241681604284,
-            "percentage": 0.1491424168160428
-        },
-        {
-            "feature": "Alcalinity of ash",
-            "importance": 0.001263068986256997,
-            "percentage": 0.1263068986256997
-        },
-        {
-            "feature": "Magnesium",
-            "importance": 0.0009833300320148772,
-            "percentage": 0.0983330032014877
-        },
-        {
-            "feature": "Alcohol",
-            "importance": 0.0004123374108774274,
-            "percentage": 0.04123374108774273
-        },
-        {
-            "feature": "Proanthocyanins",
-            "importance": 0.00035118080290006505,
-            "percentage": 0.0351180802900065
-        }
-    ]
+    "best_model": "kmeans",
+    "model_scores": null
 }

@@ -3,6 +3,7 @@ import pkgutil
 from pathlib import Path
 
 from main.model_scripts.base import validate_module
+import logging
 
 
 class RegressionTrainer:
@@ -99,13 +100,21 @@ class RegressionTrainer:
             save_path = self.output_path / f"{model_name}.joblib"
 
             model = ModelClass()
-            pipe, metrics, metadata = model.train_model(
-                X_train=X_train,
-                y_train=y_train,
-                X_val=X_val,
-                y_val=y_val,
-                save_path=save_path
-            )
+            print(f"🚀 Training {model_name}...")
+
+            try:
+                pipe, metrics, metadata = model.train_model(
+                    X_train=X_train,
+                    y_train=y_train,
+                    X_val=X_val,
+                    y_val=y_val,
+                    save_path=save_path
+                )
+            except Exception as exc:
+                # Log and continue with other models (e.g., optional quantum deps missing)
+                logging.warning(f"Skipping {model_name}: training failed ({exc})")
+                results[model_name] = {"error": str(exc)}
+                continue
 
             # Include validation predictions for visualization (Actual vs Predicted)
             try:
@@ -123,5 +132,6 @@ class RegressionTrainer:
                 "val_predictions": val_preds,
                 "val_actual": val_actual
             }
+            print(f"✅ Completed {model_name}")
 
         return results

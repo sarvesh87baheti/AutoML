@@ -213,6 +213,10 @@ export default function MetricsPage() {
     return raw?.train || raw?.val || null
   }, [data, isKMeans])
 
+  const kmeansClusterUrl = useMemo(() => {
+    return data?.dataset ? `/api/results/kmeans-clusters?dataset=${encodeURIComponent(data.dataset)}` : null
+  }, [data?.dataset])
+
   const featureImportance = useMemo(() => {
     const raw = data?.results?.feature_importance
     if (!Array.isArray(raw)) return []
@@ -958,6 +962,23 @@ export default function MetricsPage() {
                   <span className="font-medium">{formatMetric(kmeansTrainMetrics?.inertia)}</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isKMeans && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cluster Visualization</CardTitle>
+              <CardDescription>2D projection of the clustered training samples.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {kmeansClusterUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={kmeansClusterUrl} alt="KMeans clusters" className="w-full rounded-xl border bg-white p-2" />
+              ) : (
+                <p className="text-sm text-muted-foreground">Cluster visualization is not available for this run.</p>
+              )}
             </CardContent>
           </Card>
         )}

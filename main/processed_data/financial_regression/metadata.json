@@ -52,6 +52,6 @@
         "gold volume"
     ],
     "pca_applied": false,
-    "n_clusters": 5,
+    "n_clusters": 3,
     "notes": "K-means clustering mode: feature matrix saved without target variable."
 }
