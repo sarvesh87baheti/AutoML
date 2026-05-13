@@ -77,13 +77,20 @@ def run_pipeline(
     elif dataset_path.suffix.lower() == ".zip":
         with zipfile.ZipFile(dataset_path, 'r') as z:
             file_list = z.namelist()
+            # Filter out system files and directories
+            file_list = [f for f in file_list if not f.startswith('__MACOSX') and not f.endswith('/')]
+            
             csv_files = [f for f in file_list if f.lower().endswith(".csv")]
             xlsx_files = [f for f in file_list if f.lower().endswith((".xls", ".xlsx"))]
 
             if csv_files:
-                df = pd.read_csv(z.open(csv_files[0]))
+                # Use the first CSV file found
+                with z.open(csv_files[0]) as f:
+                    df = pd.read_csv(f)
             elif xlsx_files:
-                df = pd.read_excel(z.open(xlsx_files[0]))
+                # Use the first XLSX file found
+                with z.open(xlsx_files[0]) as f:
+                    df = pd.read_excel(f)
             else:
                 raise ValueError("❌ ZIP contains no CSV/XLSX file")
     else:

@@ -1,25 +1,15 @@
 {
-    "problem_type": "regression",
-    "target": "Sales ($)",
-    "n_features": 3,
-    "train_samples": 158,
-    "val_samples": 40,
+    "problem_type": "kmeans_clustering",
+    "n_features": 4,
+    "train_samples": 198,
     "feature_matrix_format": "dense_npy",
-    "categorical_cols": [],
-    "text_cols": [],
-    "numeric_cols": [
-        "TV Ad Budget ($)",
-        "Radio Ad Budget ($)",
-        "Newspaper Ad Budget ($)"
-    ],
     "feature_names": [
         "TV Ad Budget ($)",
         "Radio Ad Budget ($)",
-        "Newspaper Ad Budget ($)"
+        "Newspaper Ad Budget ($)",
+        "Sales ($)"
     ],
     "pca_applied": false,
-    "encoders": [],
-    "vectorizers": [],
-    "scaler_present": true,
-    "notes": "Encoders are kept in memory; no vectorizers are used."
+    "n_clusters": 3,
+    "notes": "K-means clustering mode: feature matrix saved without target variable."
 }

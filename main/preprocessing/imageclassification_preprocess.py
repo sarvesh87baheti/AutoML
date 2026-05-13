@@ -19,8 +19,8 @@ from sklearn.preprocessing import LabelEncoder
 # CONFIG
 # ==============================
 IMG_SIZE = (224, 224)
-VAL_SPLIT = 0.15
-TEST_SPLIT = 0.4
+VAL_SPLIT = 0.10
+TEST_SPLIT = 0.10
 RANDOM_SEED = 42
 BATCH_SIZE = 16
 SHUFFLE_BUFFER_SIZE = 512
@@ -214,6 +214,9 @@ def preprocess(zip_path):
         "train_size": int(len(train_paths)),
         "val_size": int(len(val_paths)),
         "test_size": int(len(test_paths)),
+        "train_split": 0.8,
+        "val_split": 0.1,
+        "test_split": 0.1,
         "batch_size": BATCH_SIZE,
         "img_size": list(IMG_SIZE),
     }
@@ -221,6 +224,7 @@ def preprocess(zip_path):
         json.dump(metadata, f, indent=2)
 
     print(f"\nSaved processed data to: {dataset_folder}")
+    print(f"Split: Train={len(train_paths)} (80%), Val={len(val_paths)} (10%), Test={len(test_paths)} (10%)")
 
     return train_ds, val_ds, test_ds, tmp_dir
 

@@ -176,7 +176,9 @@ export default function BuildPage() {
       setColumnsError(null)
 
       const f = e.target.files[0]
-      if (f.name.toLowerCase().endsWith(".csv")) {
+      const fileName = f.name.toLowerCase()
+
+      if (fileName.endsWith(".csv")) {
         const reader = new FileReader()
         reader.onerror = () => setColumnsError("Failed to read file")
         reader.onload = () => {
@@ -194,8 +196,18 @@ export default function BuildPage() {
           }
         }
         reader.readAsText(f)
+      } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+        // For Excel files, cannot parse in browser - headers extracted on server
+        setFileColumns([])
+        setColumnsError("Excel file detected. Column names will be shown after upload.")
+      } else if (fileName.endsWith(".zip")) {
+        // For ZIP files (tabular or image), skip client-side parsing
+        // Server will extract and handle appropriately
+        setFileColumns([])
+        if (!isImageClassification) {
+          setColumnsError("ZIP file detected. Column names will be shown after upload.")
+        }
       }
-      // For ZIP files (image classification), skip header parsing
     }
   }
 
@@ -235,11 +247,21 @@ export default function BuildPage() {
           }
         }
 
-        if (showTargetInput && targetColumn && fileColumns.length > 0) {
-          if (!fileColumns.includes(targetColumn)) {
+        // Validate target column for supervised tasks
+        if ((problemType === "classification" || problemType === "regression") && showTargetInput) {
+          if (!targetColumn || targetColumn.trim().length === 0) {
             toast({
-              title: "Target Column Missing",
-              description: `Column '${targetColumn}' not found in file headers.`,
+              title: "Target Column Required",
+              description: "Please provide a target column name for this supervised task.",
+              variant: "destructive",
+            })
+            return
+          }
+          // Only validate against extracted columns if we have them
+          if (fileColumns.length > 0 && !fileColumns.includes(targetColumn)) {
+            toast({
+              title: "Target Column Not Found",
+              description: `Column '${targetColumn}' not found in file headers. Please check the spelling.`,
               variant: "destructive",
             })
             return

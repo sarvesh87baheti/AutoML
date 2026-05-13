@@ -1,7 +1,7 @@
 {
-    "problem_type": "classification",
+    "problem_type": "regression",
     "target": "exam_score",
-    "n_features": 11,
+    "n_features": 12,
     "train_samples": 16000,
     "val_samples": 4000,
     "feature_matrix_format": "dense_npy",
@@ -22,6 +22,21 @@
         "class_attendance",
         "sleep_hours"
     ],
+    "feature_names": [
+        "student_id",
+        "age",
+        "gender",
+        "course",
+        "study_hours",
+        "class_attendance",
+        "internet_access",
+        "sleep_hours",
+        "sleep_quality",
+        "study_method",
+        "facility_rating",
+        "exam_difficulty"
+    ],
+    "pca_applied": false,
     "encoders": [
         "gender",
         "course",
@@ -29,10 +44,9 @@
         "sleep_quality",
         "study_method",
         "facility_rating",
-        "exam_difficulty",
-        "target"
+        "exam_difficulty"
     ],
     "vectorizers": [],
     "scaler_present": true,
-    "notes": "Encoders/vectorizers are kept in memory; metadata lists their keys only."
+    "notes": "Encoders are kept in memory; no vectorizers are used."
 }

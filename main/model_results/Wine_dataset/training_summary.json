@@ -8,10 +8,10 @@
                 "f1": 1.0
             },
             "val": {
-                "accuracy": 0.9090909090909091,
-                "precision": 0.9062049062049062,
-                "recall": 0.9090909090909091,
-                "f1": 0.9061555728222396
+                "accuracy": 0.9393939393939394,
+                "precision": 0.9415584415584415,
+                "recall": 0.9393939393939394,
+                "f1": 0.9393490460157126
             }
         },
         "metadata": {
@@ -20,7 +20,7 @@
             "train_samples": 128
         }
     },
-    "randomforest": {
+    "gradientboosting_classifier": {
         "metrics": {
             "train": {
                 "accuracy": 1.0,
@@ -36,7 +36,28 @@
             }
         },
         "metadata": {
-            "name": "randomforest",
+            "name": "gradientboosting_classifier",
+            "hyperparams": {},
+            "train_samples": 128
+        }
+    },
+    "knn": {
+        "metrics": {
+            "train": {
+                "accuracy": 0.96875,
+                "precision": 0.9707264957264956,
+                "recall": 0.96875,
+                "f1": 0.9685832926233513
+            },
+            "val": {
+                "accuracy": 0.9696969696969697,
+                "precision": 0.9734848484848485,
+                "recall": 0.9696969696969697,
+                "f1": 0.9701010101010101
+            }
+        },
+        "metadata": {
+            "name": "knn",
             "hyperparams": {},
             "train_samples": 128
         }
@@ -93,60 +114,46 @@
             "train_samples": 128
         }
     },
-    "gradientboosting_classifier": {
+    "naivebayes": {
         "metrics": {
             "train": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
+                "accuracy": 0.9921875,
+                "precision": 0.9923986486486487,
+                "recall": 0.9921875,
+                "f1": 0.9921998918529199
             },
             "val": {
-                "accuracy": 1.0,
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1": 1.0
+                "accuracy": 0.9696969696969697,
+                "precision": 0.9734848484848485,
+                "recall": 0.9696969696969697,
+                "f1": 0.9701010101010101
             }
         },
         "metadata": {
-            "name": "gradientboosting_classifier",
+            "name": "naivebayes",
             "hyperparams": {},
             "train_samples": 128
         }
     },
-    "quantum_classifier": {
+    "randomforest": {
         "metrics": {
             "train": {
-                "accuracy": 0.671875,
-                "precision": 0.6739784810876455,
-                "recall": 0.671875,
-                "f1": 0.6672255935270947
+                "accuracy": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0
             },
             "val": {
-                "accuracy": 0.45454545454545453,
-                "precision": 0.45165945165945165,
-                "recall": 0.45454545454545453,
-                "f1": 0.4524734524734525
+                "accuracy": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0
             }
         },
         "metadata": {
-            "name": "quantum_classifier",
-            "selected_quantum_model": "QSVC",
-            "candidate_models": [
-                "QSVC"
-            ],
-            "hyperparams": {
-                "max_qubits": 3,
-                "vqc_maxiter": 2,
-                "include_vqc": false
-            },
-            "train_samples": 128,
-            "selected_feature_indices": [
-                3,
-                8,
-                2
-            ],
-            "selected_feature_count": 3
+            "name": "randomforest",
+            "hyperparams": {},
+            "train_samples": 128
         }
     },
     "svm": {
@@ -170,115 +177,73 @@
             "train_samples": 128
         }
     },
-    "naivebayes": {
-        "metrics": {
-            "train": {
-                "accuracy": 0.9921875,
-                "precision": 0.9923986486486487,
-                "recall": 0.9921875,
-                "f1": 0.9921998918529199
-            },
-            "val": {
-                "accuracy": 0.9696969696969697,
-                "precision": 0.9734848484848485,
-                "recall": 0.9696969696969697,
-                "f1": 0.9701010101010101
-            }
-        },
-        "metadata": {
-            "name": "naivebayes",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "knn": {
-        "metrics": {
-            "train": {
-                "accuracy": 0.96875,
-                "precision": 0.9707264957264956,
-                "recall": 0.96875,
-                "f1": 0.9685832926233513
-            },
-            "val": {
-                "accuracy": 0.9696969696969697,
-                "precision": 0.9734848484848485,
-                "recall": 0.9696969696969697,
-                "f1": 0.9701010101010101
-            }
-        },
-        "metadata": {
-            "name": "knn",
-            "hyperparams": {},
-            "train_samples": 128
-        }
-    },
-    "best_model": "randomforest",
+    "best_model": "gradientboosting_classifier",
     "model_scores": null,
     "feature_importance": [
         {
             "feature": "Proline ",
-            "importance": 0.18857250410715176,
-            "percentage": 18.857250410715174
+            "importance": 0.3149260611398857,
+            "percentage": 31.492606113988565
         },
         {
             "feature": "Flavanoids",
-            "importance": 0.1447514184738954,
-            "percentage": 14.475141847389539
-        },
-        {
-            "feature": "OD280/OD315 of diluted wines",
-            "importance": 0.13394802585506155,
-            "percentage": 13.394802585506154
+            "importance": 0.31133956681629005,
+            "percentage": 31.133956681628998
         },
         {
             "feature": "Color intensity",
-            "importance": 0.12805918710756303,
-            "percentage": 12.805918710756304
-        },
-        {
-            "feature": "Alcohol",
-            "importance": 0.12437037442536579,
-            "percentage": 12.437037442536578
-        },
-        {
-            "feature": "Hue",
-            "importance": 0.06842959932401482,
-            "percentage": 6.842959932401483
-        },
-        {
-            "feature": "Total phenols",
-            "importance": 0.06085490112696769,
-            "percentage": 6.085490112696769
-        },
-        {
-            "feature": "Magnesium",
-            "importance": 0.04324974587601926,
-            "percentage": 4.324974587601926
-        },
-        {
-            "feature": "Proanthocyanins",
-            "importance": 0.028378103116856263,
-            "percentage": 2.8378103116856264
+            "importance": 0.2855382060685259,
+            "percentage": 28.553820606852586
         },
         {
             "feature": "Malic acid",
-            "importance": 0.027905590316744062,
-            "percentage": 2.790559031674406
-        },
-        {
-            "feature": "Alcalinity of ash",
-            "importance": 0.022996687230917294,
-            "percentage": 2.299668723091729
-        },
-        {
-            "feature": "Nonflavanoid phenols",
-            "importance": 0.01612503429028929,
-            "percentage": 1.6125034290289288
+            "importance": 0.05246272782214461,
+            "percentage": 5.24627278221446
         },
         {
             "feature": "Ash",
-            "importance": 0.012358828749153917,
-            "percentage": 1.2358828749153916
+            "importance": 0.01801109481149903,
+            "percentage": 1.8011094811499027
+        },
+        {
+            "feature": "Hue",
+            "importance": 0.0051925542313066625,
+            "percentage": 0.5192554231306662
+        },
+        {
+            "feature": "OD280/OD315 of diluted wines",
+            "importance": 0.0042489727394646615,
+            "percentage": 0.4248972739464661
+        },
+        {
+            "feature": "Nonflavanoid phenols",
+            "importance": 0.003779474970673608,
+            "percentage": 0.3779474970673607
+        },
+        {
+            "feature": "Total phenols",
+            "importance": 0.0014914241681604284,
+            "percentage": 0.1491424168160428
+        },
+        {
+            "feature": "Alcalinity of ash",
+            "importance": 0.001263068986256997,
+            "percentage": 0.1263068986256997
+        },
+        {
+            "feature": "Magnesium",
+            "importance": 0.0009833300320148772,
+            "percentage": 0.0983330032014877
+        },
+        {
+            "feature": "Alcohol",
+            "importance": 0.0004123374108774274,
+            "percentage": 0.04123374108774273
+        },
+        {
+            "feature": "Proanthocyanins",
+            "importance": 0.00035118080290006505,
+            "percentage": 0.0351180802900065
         }
     ]
 }

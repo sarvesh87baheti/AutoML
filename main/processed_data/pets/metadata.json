@@ -1,0 +1,16 @@
+{
+  "problem_type": "image_classification",
+  "class_names": [
+    "cats",
+    "dogs"
+  ],
+  "num_classes": 2,
+  "train_size": 9,
+  "val_size": 3,
+  "test_size": 8,
+  "batch_size": 16,
+  "img_size": [
+    224,
+    224
+  ]
+}

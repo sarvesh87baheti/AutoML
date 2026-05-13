@@ -116,25 +116,36 @@ def process_features(
         save_path.mkdir(parents=True, exist_ok=True)
 
         if task_type in {"regression", "classification"}:
-            X_train, X_val, y_train, y_val = train_test_split(
-                X_final, y_final, test_size=test_size, random_state=random_state
+            # First split: 80% train, 20% temp (val+test combined)
+            X_train, X_temp, y_train, y_temp = train_test_split(
+                X_final, y_final, test_size=0.2, random_state=random_state, stratify=y_final if task_type == "classification" else None
+            )
+            
+            # Second split: split temp 50/50 for validation (10%) and test (10%)
+            X_val, X_test, y_val, y_test = train_test_split(
+                X_temp, y_temp, test_size=0.5, random_state=random_state, stratify=y_temp if task_type == "classification" else None
             )
 
             if issparse(X_train):
                 save_npz(save_path / "X_train.npz", X_train)
                 save_npz(save_path / "X_val.npz", X_val)
+                save_npz(save_path / "X_test.npz", X_test)
                 x_train_shape = X_train.shape
                 x_val_shape = X_val.shape
+                x_test_shape = X_test.shape
                 x_format = "sparse_npz"
             else:
                 np.save(save_path / "X_train.npy", X_train)
                 np.save(save_path / "X_val.npy", X_val)
+                np.save(save_path / "X_test.npy", X_test)
                 x_train_shape = X_train.shape
                 x_val_shape = X_val.shape
+                x_test_shape = X_test.shape
                 x_format = "dense_npy"
 
             np.save(save_path / "y_train.npy", y_train)
             np.save(save_path / "y_val.npy", y_val)
+            np.save(save_path / "y_test.npy", y_test)
 
             metadata = {
                 "problem_type": task_type,
@@ -142,6 +153,10 @@ def process_features(
                 "n_features": int(x_train_shape[1]) if len(x_train_shape) > 1 else 1,
                 "train_samples": int(x_train_shape[0]),
                 "val_samples": int(x_val_shape[0]),
+                "test_samples": int(x_test_shape[0]),
+                "train_split": 0.8,
+                "val_split": 0.1,
+                "test_split": 0.1,
                 "feature_matrix_format": x_format,
                 "categorical_cols": list(categorical_cols),
                 "text_cols": [],
@@ -157,7 +172,7 @@ def process_features(
             with open(save_path / "metadata.json", "w") as f:
                 json.dump(metadata, f, indent=4)
 
-            print(f"✅ Saved train/val arrays and metadata to: {save_path}")
+            print(f"✅ Saved train/val/test arrays (80%/10%/10%) and metadata to: {save_path}")
 
         else:
             if issparse(X_final):
