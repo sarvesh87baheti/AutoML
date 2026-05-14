@@ -35,6 +35,13 @@ type ComparisonModel = {
   size_mb?: number
 }
 
+type ModelMetric = {
+  name: string
+  label: string
+  metrics: Record<string, any>
+  isCustom: boolean
+}
+
 function useLatestResults() {
   const [data, setData] = useState<ResultsPayload | null>(null)
   const [loading, setLoading] = useState(true)
@@ -76,6 +83,36 @@ function formatMetric(value: unknown, digits = 4) {
 
 function formatCompactNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value.toLocaleString() : "N/A"
+}
+
+function CustomModelBadge() {
+  return (
+    <Badge
+      variant="outline"
+      className="shrink-0 border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300"
+    >
+      Custom
+    </Badge>
+  )
+}
+
+function ModelNameWithBadge({
+  name,
+  isCustom,
+  className = "",
+}: {
+  name: string
+  isCustom?: boolean
+  className?: string
+}) {
+  const classes = ["flex flex-wrap items-center gap-2", className].filter(Boolean).join(" ")
+
+  return (
+    <div className={classes}>
+      <span>{prettyModelName(name)}</span>
+      {isCustom ? <CustomModelBadge /> : null}
+    </div>
+  )
 }
 
 function buildExportPayload(args: {
@@ -172,11 +209,18 @@ export default function MetricsPage() {
   const isLightMode = imageMode === "light"
 
   const modelMetrics = useMemo(() => {
-    const arr: { name: string; metrics: any }[] = []
+    const arr: ModelMetric[] = []
     const resultMap = data?.results || {}
     for (const [name, value] of Object.entries<any>(resultMap)) {
       const metrics = value?.metrics?.val || value?.metrics?.train
-      if (metrics) arr.push({ name, metrics })
+      if (metrics) {
+        arr.push({
+          name,
+          label: prettyModelName(name),
+          metrics,
+          isCustom: value?.is_custom === true,
+        })
+      }
     }
     return arr
   }, [data])
@@ -185,10 +229,12 @@ export default function MetricsPage() {
     if (isImageClassification) return []
     if (!modelMetrics.length) return []
     return modelMetrics
-      .map(({ name, metrics }) => ({
+      .map(({ name, label, metrics, isCustom }) => ({
         name,
-        label: prettyModelName(name),
+        label,
         value: isRegression ? metrics.r2 : metrics.accuracy,
+        mse: metrics.mse,
+        isCustom,
       }))
       .filter((item) => typeof item.value === "number")
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
@@ -207,11 +253,15 @@ export default function MetricsPage() {
     return accuracyData.reduce((sum, item) => sum + (item.value ?? 0), 0) / accuracyData.length
   }, [accuracyData])
 
+  const bestModelIsCustom = useMemo(() => {
+    return data?.results?.[bestModelName]?.is_custom === true
+  }, [bestModelName, data?.results])
+
   const kmeansTrainMetrics = useMemo(() => {
     if (!isKMeans) return null
-    const raw = data?.results?.kmeans?.metrics
+    const raw = data?.results?.[bestModelName]?.metrics || data?.results?.kmeans?.metrics
     return raw?.train || raw?.val || null
-  }, [data, isKMeans])
+  }, [bestModelName, data, isKMeans])
 
   const kmeansClusterUrl = useMemo(() => {
     return data?.dataset ? `/api/results/kmeans-clusters?dataset=${encodeURIComponent(data.dataset)}` : null
@@ -252,15 +302,35 @@ export default function MetricsPage() {
 
   const classificationComparisonRows = useMemo(() => {
     if (!isClassification) return []
-    return modelMetrics.map(({ name, metrics }) => ({
+    return modelMetrics.map(({ name, label, metrics, isCustom }) => ({
       name,
-      label: prettyModelName(name),
+      label,
       accuracy: metrics?.accuracy,
       precision: metrics?.precision,
       recall: metrics?.recall,
       f1: metrics?.f1,
+      isCustom,
     }))
   }, [isClassification, modelMetrics])
+
+  const kmeansModelRows = useMemo(() => {
+    if (!isKMeans) return []
+    return modelMetrics
+      .map(({ name, label, metrics, isCustom }) => ({
+        name,
+        label,
+        silhouette: metrics?.silhouette,
+        inertia: metrics?.inertia,
+        calinskiHarabasz: metrics?.calinski_harabasz,
+        daviesBouldin: metrics?.davies_bouldin,
+        isCustom,
+      }))
+      .sort((a, b) => {
+        const aScore = typeof a.silhouette === "number" ? a.silhouette : Number.NEGATIVE_INFINITY
+        const bScore = typeof b.silhouette === "number" ? b.silhouette : Number.NEGATIVE_INFINITY
+        return bScore - aScore
+      })
+  }, [isKMeans, modelMetrics])
 
   const imageClassificationData = useMemo(() => {
     if (!isImageClassification) return null
@@ -428,7 +498,11 @@ export default function MetricsPage() {
                   <Trophy className="h-4 w-4 text-orange-500" />
                   {isLightMode ? "Model used" : "Best backbone"}
                 </div>
-                <p className="text-2xl font-semibold">{prettyModelName(bestModelName)}</p>
+                <ModelNameWithBadge
+                  name={bestModelName}
+                  isCustom={bestModelIsCustom}
+                  className="text-2xl font-semibold"
+                />
                 <p className="text-sm text-muted-foreground">
                   Accuracy {formatMetric(imageClassificationData?.accuracy)} with loss {formatMetric(imageClassificationData?.loss)}
                 </p>
@@ -441,7 +515,11 @@ export default function MetricsPage() {
                   <Trophy className="h-4 w-4 text-violet-600" />
                   Best classifier
                 </div>
-                <p className="text-2xl font-semibold">{prettyModelName(bestModelName)}</p>
+                <ModelNameWithBadge
+                  name={bestModelName}
+                  isCustom={bestModelIsCustom}
+                  className="text-2xl font-semibold"
+                />
                 <p className="text-sm text-muted-foreground">
                   Accuracy {formatMetric(classificationBestMetrics.accuracy, 3)} and F1 {formatMetric(classificationBestMetrics.f1, 3)}
                 </p>
@@ -454,7 +532,11 @@ export default function MetricsPage() {
                   <Trophy className="h-4 w-4 text-blue-500" />
                   Best regressor
                 </div>
-                <p className="text-2xl font-semibold">{prettyModelName(bestModelName)}</p>
+                <ModelNameWithBadge
+                  name={bestModelName}
+                  isCustom={bestModelIsCustom}
+                  className="text-2xl font-semibold"
+                />
                 <p className="text-sm text-muted-foreground">
                   Top validation fit selected from the trained regression models.
                 </p>
@@ -467,7 +549,11 @@ export default function MetricsPage() {
                   <Layers3 className="h-4 w-4 text-teal-500" />
                   Cluster profile
                 </div>
-                <p className="text-2xl font-semibold">{prettyModelName(bestModelName)}</p>
+                <ModelNameWithBadge
+                  name={bestModelName}
+                  isCustom={bestModelIsCustom}
+                  className="text-2xl font-semibold"
+                />
                 <p className="text-sm text-muted-foreground">
                   Use silhouette and Davies-Bouldin together to judge whether the current k is a good fit.
                 </p>
@@ -483,7 +569,11 @@ export default function MetricsPage() {
                 <CardTitle>Best Model</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">{prettyModelName(bestModelName)}</p>
+                <ModelNameWithBadge
+                  name={bestModelName}
+                  isCustom={bestModelIsCustom}
+                  className="text-2xl font-bold"
+                />
               </CardContent>
             </Card>
 
@@ -516,7 +606,7 @@ export default function MetricsPage() {
               <CardContent>
                 <div className="flex items-center gap-2 text-2xl font-bold">
                   <Layers3 className="h-6 w-6 text-teal-500" />
-                  {prettyModelName(bestModelName)}
+                  <ModelNameWithBadge name={bestModelName} isCustom={bestModelIsCustom} />
                 </div>
               </CardContent>
             </Card>
@@ -548,7 +638,11 @@ export default function MetricsPage() {
                 <CardTitle>Best Classifier</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">{prettyModelName(bestModelName)}</p>
+                <ModelNameWithBadge
+                  name={bestModelName}
+                  isCustom={bestModelIsCustom}
+                  className="text-2xl font-bold"
+                />
               </CardContent>
             </Card>
             <Card>
@@ -585,7 +679,11 @@ export default function MetricsPage() {
                 <CardTitle>Best Regressor</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">{prettyModelName(bestModelName)}</p>
+                <ModelNameWithBadge
+                  name={bestModelName}
+                  isCustom={bestModelIsCustom}
+                  className="text-2xl font-bold"
+                />
               </CardContent>
             </Card>
             <Card>
@@ -705,7 +803,7 @@ export default function MetricsPage() {
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="label" interval={0} angle={-15} textAnchor="end" height={70} />
                           <YAxis domain={[0, 1]} />
-                          <Tooltip formatter={(value: number) => value.toFixed(4)} />
+                          <Tooltip formatter={(value?: number) => (typeof value === "number" ? value.toFixed(4) : "N/A")} />
                           <Bar dataKey="value" fill="#f97316" radius={[10, 10, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
@@ -966,22 +1064,90 @@ export default function MetricsPage() {
           </Card>
         )}
 
+
         {isKMeans && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Cluster Visualization</CardTitle>
-              <CardDescription>2D projection of the clustered training samples.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {kmeansClusterUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={kmeansClusterUrl} alt="KMeans clusters" className="w-full rounded-xl border bg-white p-2" />
-              ) : (
-                <p className="text-sm text-muted-foreground">Cluster visualization is not available for this run.</p>
-              )}
-            </CardContent>
-          </Card>
+  <>
+    {kmeansModelRows.length > 0 && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Clustering Scorecard</CardTitle>
+          <CardDescription>
+            All clustering candidates with their validation metrics.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="p-3">Model</th>
+                  <th className="p-3 text-right">Silhouette</th>
+                  <th className="p-3 text-right">Inertia</th>
+                  <th className="p-3 text-right">Calinski-Harabasz</th>
+                  <th className="p-3 text-right">Davies-Bouldin</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {kmeansModelRows.map((row) => (
+                  <tr key={row.name} className="border-b hover:bg-muted/40">
+                    <td className="p-3">
+                      <ModelNameWithBadge
+                        name={row.name}
+                        isCustom={row.isCustom}
+                        className="font-medium"
+                      />
+                    </td>
+
+                    <td className="p-3 text-right">
+                      {formatMetric(row.silhouette, 3)}
+                    </td>
+
+                    <td className="p-3 text-right">
+                      {formatMetric(row.inertia, 3)}
+                    </td>
+
+                    <td className="p-3 text-right">
+                      {formatMetric(row.calinskiHarabasz, 3)}
+                    </td>
+
+                    <td className="p-3 text-right">
+                      {formatMetric(row.daviesBouldin, 3)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    )}
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Cluster Visualization</CardTitle>
+        <CardDescription>
+          2D projection of the clustered training samples.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        {kmeansClusterUrl ? (
+          <img
+            src={kmeansClusterUrl}
+            alt="KMeans clusters"
+            className="w-full rounded-xl border bg-white p-2"
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Cluster visualization is not available for this run.
+          </p>
         )}
+      </CardContent>
+    </Card>
+  </>
+)}
 
         {isClassification && classificationComparisonRows.length > 0 && (
           <Card>
@@ -1004,7 +1170,9 @@ export default function MetricsPage() {
                   <tbody>
                     {classificationComparisonRows.map((row) => (
                       <tr key={row.name} className="border-b hover:bg-muted/40">
-                        <td className="p-3 font-medium">{row.label}</td>
+                        <td className="p-3">
+                          <ModelNameWithBadge name={row.name} isCustom={row.isCustom} className="font-medium" />
+                        </td>
                         <td className="p-3 text-right">{formatMetric(row.accuracy, 3)}</td>
                         <td className="p-3 text-right">{formatMetric(row.precision, 3)}</td>
                         <td className="p-3 text-right">{formatMetric(row.recall, 3)}</td>
@@ -1032,13 +1200,17 @@ export default function MetricsPage() {
                       <tr className="border-b text-left">
                         <th className="p-3">Model</th>
                         <th className="p-3 text-right">R²</th>
+                        <th className="p-3 text-right">MSE</th>
                       </tr>
                     </thead>
                     <tbody>
                       {accuracyData.map((row) => (
                         <tr key={row.name} className="border-b hover:bg-muted/40">
-                          <td className="p-3 font-medium">{row.label}</td>
+                          <td className="p-3">
+                            <ModelNameWithBadge name={row.name} isCustom={row.isCustom} className="font-medium" />
+                          </td>
                           <td className="p-3 text-right">{formatMetric(row.value, 3)}</td>
+                          <td className="p-3 text-right">{formatMetric(row.mse, 3)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1173,7 +1345,7 @@ export default function MetricsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" domain={[0, "dataMax"]} tickFormatter={(value) => `${value}%`} />
                   <YAxis type="category" dataKey="feature" width={140} />
-                  <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
+                  <Tooltip formatter={(value?: number) => (typeof value === "number" ? `${value.toFixed(2)}%` : "N/A")} />
                   <Bar dataKey="percentage" fill="#f97316" radius={[0, 8, 8, 0]} />
                 </BarChart>
               </ResponsiveContainer>
