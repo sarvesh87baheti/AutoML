@@ -1,4 +1,3 @@
-
 "use client"
 
 import type React from "react"
@@ -26,6 +25,10 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { postUpload } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
+
+// ── NEW: custom-script components ──────────────────────────────────────────
+import CustomScriptsUpload, { type StatusMap } from "@/components/CustomScriptsUpload"
+import InvalidScriptModal, { type InvalidScriptEntry } from "@/components/InvalidScriptModal"
 
 type ProblemType = "classification" | "regression" | "kmeans_clustering" | "image_classification"
 
@@ -164,10 +167,18 @@ export default function BuildPage() {
 
   const [fileColumns, setFileColumns] = useState<string[]>([])
   const [columnsError, setColumnsError] = useState<string | null>(null)
-  const isImageClassification = problemType === "image_classification"
-  const selectedProblemCard = problemTypeCards.find((item) => item.value === problemType)
-  const isTabularTask = problemType === "classification" || problemType === "regression" || problemType === "kmeans_clustering"
-  const tabularContent = isTabularTask ? tabularWorkflowContent[problemType] : null
+
+  // ── NEW: custom-script state ─────────────────────────────────────────────
+  const [customScriptFiles, setCustomScriptFiles] = useState<File[]>([])
+  const [scriptStatusMap,   setScriptStatusMap]   = useState<StatusMap>({})
+  const [modalOpen,         setModalOpen]          = useState(false)
+  // Stores invalid entries when the modal is shown
+  const [modalInvalidScripts, setModalInvalidScripts] = useState<InvalidScriptEntry[]>([])
+
+  const isImageClassification  = problemType === "image_classification"
+  const selectedProblemCard    = problemTypeCards.find((item) => item.value === problemType)
+  const isTabularTask          = problemType === "classification" || problemType === "regression" || problemType === "kmeans_clustering"
+  const tabularContent         = isTabularTask ? tabularWorkflowContent[problemType] : null
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -211,6 +222,42 @@ export default function BuildPage() {
     }
   }
 
+  // ── NEW: actual submission logic, called both from button and modal ──────
+  /**
+   * Builds FormData and calls postUpload.
+   * @param validScripts  Only these custom script files will be appended.
+   */
+  async function submitTraining(validScripts: File[]) {
+    if (!file || !problemType) return
+
+    const formData = new FormData()
+    formData.append("dataset", file)
+    formData.append("problem_type", problemType)
+
+    if (problemType === "classification" || problemType === "regression") {
+      formData.append("target_col", targetColumn)
+    }
+    if (problemType === "kmeans_clustering") {
+      formData.append("k", kValue)
+    }
+    if (problemType === "image_classification") {
+      formData.append("image_mode", imageTrainingMode)
+    }
+
+    // Append valid custom scripts as custom_script_0, custom_script_1, ...
+    validScripts.slice(0, 3).forEach((f, i) => {
+      formData.append(`custom_script_${i}`, f)
+    })
+
+    const result = await postUpload(formData)
+    console.log("Upload result:", result)
+
+    toast({
+      title: "Training Started",
+      description: "Dataset uploaded successfully. Training in progress...",
+    })
+  }
+
   const handleBuildModel = async () => {
     try {
       setIsProcessing(true)
@@ -225,7 +272,6 @@ export default function BuildPage() {
           return
         }
 
-        // Validate file type based on problem type
         if (isImageClassification && !file.name.toLowerCase().endsWith(".zip")) {
           toast({
             title: "Invalid File Format",
@@ -237,7 +283,12 @@ export default function BuildPage() {
 
         if (!isImageClassification) {
           const fileName = file.name.toLowerCase()
-          if (!fileName.endsWith(".csv") && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".zip")) {
+          if (
+            !fileName.endsWith(".csv") &&
+            !fileName.endsWith(".xlsx") &&
+            !fileName.endsWith(".xls") &&
+            !fileName.endsWith(".zip")
+          ) {
             toast({
               title: "Invalid File Format",
               description: "Please upload a CSV, Excel, or ZIP file.",
@@ -277,26 +328,23 @@ export default function BuildPage() {
           return
         }
 
-        const formData = new FormData()
-        formData.append("dataset", file)
-        formData.append("problem_type", problemType)
-        if (problemType === "classification" || problemType === "regression") {
-          formData.append("target_col", targetColumn)
-        }
-        if (problemType === "kmeans_clustering") {
-          formData.append("k", kValue)
-        }
-        if (problemType === "image_classification") {
-          formData.append("image_mode", imageTrainingMode)
-        }
+        // ── NEW: custom script gate ──────────────────────────────────────
+        const invalidEntries: InvalidScriptEntry[] = customScriptFiles
+          .filter((f) => scriptStatusMap[f.name]?.state === "invalid")
+          .map((f) => ({
+            filename: f.name,
+            reason:   (scriptStatusMap[f.name] as { state: "invalid"; reason: string }).reason,
+          }))
 
-        const result = await postUpload(formData)
-        console.log("Upload result:", result)
+        if (invalidEntries.length > 0) {
+          // Show the modal — pause here; submission continues via onProceed
+          setModalInvalidScripts(invalidEntries)
+          setModalOpen(true)
+          return   // <-- setIsProcessing(false) happens in finally
+        }
+        // ── END NEW ─────────────────────────────────────────────────────
 
-        toast({
-          title: "Training Started",
-          description: "Dataset uploaded successfully. Training in progress...",
-        })
+        await submitTraining(customScriptFiles)
       }
 
       setTrainingComplete(true)
@@ -332,11 +380,39 @@ export default function BuildPage() {
       } else if (code === "INVALID_IMAGE_MODE") {
         title = "Invalid Training Mode"
         friendly = "Choose a valid image training mode and try again."
+      } else if (code === "INVALID_SCRIPT_EXTENSION") {
+        title = "Invalid Script"
+        friendly = "Custom scripts must be .py files."
       }
 
+      toast({ title, description: friendly, variant: "destructive" })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // ── NEW: modal action handlers ────────────────────────────────────────────
+  /**
+   * User chose to proceed without the invalid scripts.
+   * Filter to only valid scripts and submit.
+   */
+  async function handleModalProceed() {
+    setModalOpen(false)
+    setIsProcessing(true)
+    try {
+      const validScripts = customScriptFiles.filter(
+        (f) => scriptStatusMap[f.name]?.state === "valid"
+      )
+      await submitTraining(validScripts)
+      setTrainingComplete(true)
       toast({
-        title,
-        description: friendly,
+        title: "Training Complete",
+        description: "Your model has been trained successfully!",
+      })
+    } catch (err: any) {
+      toast({
+        title: "Upload Error",
+        description: err?.message || "Failed to build model.",
         variant: "destructive",
       })
     } finally {
@@ -344,8 +420,24 @@ export default function BuildPage() {
     }
   }
 
+  /** User wants to go back and fix the scripts. Just close the modal. */
+  function handleModalUploadAgain() {
+    setModalOpen(false)
+  }
+
   return (
     <div className="container py-12">
+      {/* ── NEW: Invalid script modal ──────────────────────────────────────── */}
+      <InvalidScriptModal
+        open={modalOpen}
+        invalidScripts={modalInvalidScripts}
+        hasValidScripts={customScriptFiles.some(
+          (f) => scriptStatusMap[f.name]?.state === "valid"
+        )}
+        onProceed={handleModalProceed}
+        onUploadAgain={handleModalUploadAgain}
+      />
+
       <div className="mx-auto max-w-5xl space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
@@ -377,6 +469,9 @@ export default function BuildPage() {
                     setFileColumns([])
                     setColumnsError(null)
                     setDataSource("upload")
+                    // Reset custom scripts when problem type changes
+                    setCustomScriptFiles([])
+                    setScriptStatusMap({})
                   }}
                 >
                   <div className="grid gap-3 md:grid-cols-2">
@@ -419,7 +514,9 @@ export default function BuildPage() {
                         {selectedProblemCard.title} workflow
                       </div>
                       <h2 className="text-2xl font-semibold">
-                        {isImageClassification ? "Build an image classifier from a zipped folder dataset" : "Configure your dataset and training inputs"}
+                        {isImageClassification
+                          ? "Build an image classifier from a zipped folder dataset"
+                          : "Configure your dataset and training inputs"}
                       </h2>
                       <p className="max-w-2xl text-sm text-muted-foreground">
                         {isImageClassification
@@ -505,9 +602,7 @@ export default function BuildPage() {
                         </div>
 
                         <div className="mt-3 rounded-xl border bg-muted/30 p-4">
-                          <p className="text-sm font-medium text-foreground">
-                            {problemType === "kmeans_clustering" ? "Required input" : "Required input"}
-                          </p>
+                          <p className="text-sm font-medium text-foreground">Required input</p>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {problemType === "classification" || problemType === "regression"
                               ? "Select a dataset and provide the target column."
@@ -571,8 +666,12 @@ export default function BuildPage() {
                         >
                           Select File
                         </Button>
-                        <Input id="data-upload" type="file" accept=".csv,.xlsx,.xls,.zip"
-                          className="hidden" onChange={handleFileChange}
+                        <Input
+                          id="data-upload"
+                          type="file"
+                          accept=".csv,.xlsx,.xls,.zip"
+                          className="hidden"
+                          onChange={handleFileChange}
                         />
 
                         {file && <p className="mt-3 text-sm text-green-600">Selected: {file.name}</p>}
@@ -600,6 +699,14 @@ export default function BuildPage() {
                 )}
               </div>
 
+              {/* ── NEW: Custom Scripts Upload section ──────────────────────── */}
+              <CustomScriptsUpload
+                problemType={problemType}
+                onFilesChange={setCustomScriptFiles}
+                onStatusChange={setScriptStatusMap}
+              />
+              {/* ── END NEW ──────────────────────────────────────────────────── */}
+
               {isImageClassification && (
                 <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
                   <div className="space-y-3">
@@ -620,7 +727,7 @@ export default function BuildPage() {
                         <div>
                           <p className="font-medium">Light Mode</p>
                           <p className="text-sm text-muted-foreground">
-                            Trains only `MobileNetV2` first for the fastest result.
+                            Trains only MobileNetV2 first for the fastest result.
                           </p>
                         </div>
                       </label>
@@ -724,11 +831,6 @@ export default function BuildPage() {
                     <BarChart3 className="mr-2" /> View Metric Charts
                   </Button>
                 </Link>
-                {/* <Link href="/results/predictions">
-                  <Button className="w-full" variant="outline">
-                    <Wand2 className="mr-2" /> Make Predictions
-                  </Button>
-                </Link> */}
               </div>
             </CardContent>
           </Card>

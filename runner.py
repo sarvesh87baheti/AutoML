@@ -1,9 +1,11 @@
 # runner.py
+
 import argparse
 import json
 import io
 import logging
 from contextlib import redirect_stdout
+
 import pandas as pd
 from pathlib import Path
 import zipfile
@@ -26,6 +28,7 @@ from main.model_training.orchestrator import Orchestrator
 from main.model_training.imageclassification_multi_train import run_training as run_image_classification_training
 from main.model_training.feature_importance import compute_feature_priorities
 from main.final_model_selection.final_model_sel import compute_model_scores
+from main.model_scripts.script_validator import validate_custom_script
 
 
 def run_pipeline(
@@ -34,6 +37,7 @@ def run_pipeline(
     target_col: str = None,
     n_clusters: int = None,
     image_mode: str = "standard",
+    custom_script_paths: list[str] = None,
 ):
     print("\n===============================")
     print("🚀 Starting AutoML Pipeline")
@@ -43,17 +47,25 @@ def run_pipeline(
     if not dataset_path.exists():
         raise FileNotFoundError(f"❌ Dataset not found: {file_path}")
 
+    # Normalise custom scripts to a list of Path objects
+    custom_paths: list[Path] = []
+    if custom_script_paths:
+        for p in custom_script_paths:
+            cp = Path(p)
+            if cp.exists():
+                custom_paths.append(cp)
+            else:
+                logger.warning(f"Custom script path not found, ignoring: {p}")
+
     # -------------------------------------------------------
     # HANDLE IMAGE CLASSIFICATION SEPARATELY
     # -------------------------------------------------------
     if problem_type == "image_classification":
         print(f"📂 Loading image dataset: {dataset_path.name}")
-        
         if not dataset_path.suffix.lower() == ".zip":
             raise ValueError("❌ Image classification requires a ZIP file with class folders containing images.")
-        
+
         try:
-            # Call the dedicated image classification pipeline
             result = run_image_classification_training(str(dataset_path), image_mode=image_mode)
             return result
         except Exception as e:
@@ -62,6 +74,7 @@ def run_pipeline(
     # -------------------------------------------------------
     # STANDARD PIPELINE FOR REGRESSION, CLASSIFICATION, KMEANS
     # -------------------------------------------------------
+
     dataset_name = dataset_path.stem
     project_root = ROOT / "main"
 
@@ -69,7 +82,6 @@ def run_pipeline(
     # 1) LOAD DATASET
     # -------------------------------------------------------
     print(f"📂 Loading dataset: {dataset_path.name}")
-
     if dataset_path.suffix.lower() == ".csv":
         df = pd.read_csv(dataset_path)
     elif dataset_path.suffix.lower() in [".xls", ".xlsx"]:
@@ -82,7 +94,6 @@ def run_pipeline(
             
             csv_files = [f for f in file_list if f.lower().endswith(".csv")]
             xlsx_files = [f for f in file_list if f.lower().endswith((".xls", ".xlsx"))]
-
             if csv_files:
                 # Use the first CSV file found
                 with z.open(csv_files[0]) as f:
@@ -117,7 +128,21 @@ def run_pipeline(
         raise ValueError(f"❌ Unsupported problem type: {problem_type}")
 
     # -------------------------------------------------------
-    # 3) PREPROCESS & SAVE PROCESSED DATA
+    # 3) VALIDATE CUSTOM SCRIPTS (before spending time on preprocessing)
+    # -------------------------------------------------------
+    valid_custom_paths: list[Path] = []
+    if custom_paths:
+        print(f"\n🔍 Validating {len(custom_paths)} custom script(s)...")
+        for cp in custom_paths:
+            ok, reason = validate_custom_script(cp, problem_type)
+            if ok:
+                print(f"  ✅ {cp.name} — valid")
+                valid_custom_paths.append(cp)
+            else:
+                print(f"  ⚠️  {cp.name} — INVALID: {reason} (will be skipped)")
+
+    # -------------------------------------------------------
+    # 4) PREPROCESS & SAVE PROCESSED DATA
     # -------------------------------------------------------
     processed_dir = project_root / "processed_data" / dataset_name
     print("⚙️ Preprocessing features...")
@@ -140,7 +165,7 @@ def run_pipeline(
         meta = {}
 
     # -------------------------------------------------------
-    # 4) TRAIN MODELS
+    # 5) TRAIN MODELS
     # -------------------------------------------------------
     print(f"🤖 Training {problem_type} models...")
     results_dir = project_root / "model_results" / dataset_name
@@ -149,13 +174,14 @@ def run_pipeline(
     orchestrator = Orchestrator(
         dataset_path=processed_dir,
         model_scripts_path=project_root / "model_scripts",
-        output_path=results_dir
+        output_path=results_dir,
+        custom_script_paths=valid_custom_paths,
     )
 
     results = orchestrator.run()
 
     # -------------------------------------------------------
-    # 5) BEST MODEL SELECTION
+    # 6) BEST MODEL SELECTION
     # -------------------------------------------------------
     if problem_type in {"regression", "classification"}:
         best_model, scores = compute_model_scores(results)
@@ -167,12 +193,11 @@ def run_pipeline(
         results["model_scores"] = None
 
     # -------------------------------------------------------
-    # 6) FEATURE IMPORTANCE EXTRACTION
+    # 7) FEATURE IMPORTANCE EXTRACTION
     # -------------------------------------------------------
     if meta_file.exists():
         feature_names = meta.get("feature_names", [])
 
-        # Verify PCA was not applied (to ensure feature names match model features)
         if meta.get("pca_applied", False):
             logger.warning(
                 "PCA was applied during preprocessing. Feature importance may not be meaningful "
@@ -185,7 +210,6 @@ def run_pipeline(
             y_val_path = processed_dir / "y_val.npy"
 
             if problem_type in {"regression", "classification"} and model_path.exists() and y_val_path.exists():
-                # Load validation features (sparse or dense)
                 if x_val_sparse_path.exists():
                     from scipy.sparse import load_npz
                     X_val = load_npz(x_val_sparse_path)
@@ -218,34 +242,121 @@ def run_pipeline(
     summary_path = results_dir / "training_summary.json"
     with open(summary_path, "w") as f:
         json.dump(results, f, indent=4)
-
     print(f"📄 Summary saved: {summary_path}")
-    print("\n🎉 AutoML Pipeline completed.\n")
 
+    print("\n🎉 AutoML Pipeline completed.\n")
     return results
+
+
+def validate_only(
+    custom_script_paths: list[str],
+    problem_type: str,
+) -> dict:
+    """
+    Validate a list of custom script paths without running the training
+    pipeline.  Used by the --validate-only CLI flag and the Next.js
+    /api/validate-scripts endpoint.
+
+    Returns a dict:
+        {
+            "results": [
+                {"filename": "...", "valid": true/false, "reason": "..."},
+                ...
+            ]
+        }
+    """
+    output = []
+    for p in custom_script_paths:
+        cp = Path(p)
+        ok, reason = validate_custom_script(cp, problem_type)
+        output.append({
+            "filename": cp.name,
+            "valid": ok,
+            "reason": reason,
+        })
+    return {"results": output}
 
 
 # =======================================================
 # CLI WRAPPER
 # =======================================================
+
 def main():
     parser = argparse.ArgumentParser(description="Run AutoML pipeline.")
-    parser.add_argument("--file", required=True)
-    parser.add_argument("--problem", required=True, choices=["regression", "classification", "kmeans_clustering", "image_classification"])
+    parser.add_argument("--file", required=False)
+    parser.add_argument(
+        "--problem",
+        required=False,
+        choices=["regression", "classification", "kmeans_clustering", "image_classification"],
+    )
     parser.add_argument("--target", required=False)
     parser.add_argument("--k", required=False, type=int)
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--image-mode", choices=["light", "standard"], default="standard")
+    parser.add_argument(
+        "--custom-scripts",
+        nargs="*",
+        default=[],
+        dest="custom_scripts",
+        metavar="SCRIPT_PATH",
+        help="Paths to one or more custom model .py scripts (max 3).",
+    )
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        dest="validate_only",
+        help=(
+            "Validate --custom-scripts against --problem type and print JSON "
+            "results without running the training pipeline."
+        ),
+    )
 
     args = parser.parse_args()
+
+    # ── Validate-only mode ────────────────────────────────────────────────────
+    if args.validate_only:
+        if not args.problem:
+            parser.error("--problem is required with --validate-only")
+        result = validate_only(args.custom_scripts or [], args.problem)
+        print(json.dumps(result, indent=2))
+        return
+
+    # ── Normal training mode ──────────────────────────────────────────────────
+    if not args.file:
+        parser.error("--file is required")
+    if not args.problem:
+        parser.error("--problem is required")
+
+    # Enforce the 3-script limit at the CLI layer
+    custom_scripts = args.custom_scripts or []
+    if len(custom_scripts) > 3:
+        print(
+            f"⚠️  More than 3 custom scripts provided ({len(custom_scripts)}); "
+            "only the first 3 will be used."
+        )
+        custom_scripts = custom_scripts[:3]
 
     if args.json:
         buf = io.StringIO()
         with redirect_stdout(buf):
-            result = run_pipeline(args.file, args.problem, args.target, args.k, args.image_mode)
+            result = run_pipeline(
+                args.file,
+                args.problem,
+                args.target,
+                args.k,
+                args.image_mode,
+                custom_script_paths=custom_scripts,
+            )
         print(json.dumps(result))
     else:
-        result = run_pipeline(args.file, args.problem, args.target, args.k, args.image_mode)
+        result = run_pipeline(
+            args.file,
+            args.problem,
+            args.target,
+            args.k,
+            args.image_mode,
+            custom_script_paths=custom_scripts,
+        )
         print(json.dumps(result, indent=2))
 
 

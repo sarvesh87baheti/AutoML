@@ -1,25 +1,55 @@
 import importlib
+import importlib.util
 import pkgutil
+import sys
 from pathlib import Path
+from typing import List
 
 import numpy as np
 from sklearn.decomposition import PCA
 
 from main.model_scripts.base import validate_module
 
+# File stems that must never be loaded as model scripts.
+_SKIP_STEMS = {"__init__", "base", "utils", "script_validator", "example_custom_model"}
+
 
 class KMClusteringTrainer:
-    def __init__(self, scripts_path: Path, output_path: Path):
+    def __init__(
+        self,
+        scripts_path: Path,
+        output_path: Path,
+        custom_script_paths: List[Path] | None = None,
+    ):
         self.scripts_path = scripts_path
         self.output_path = output_path
+        self.custom_script_paths: List[Path] = custom_script_paths or []
 
-    def _load_models(self):
+    # ── Model discovery ───────────────────────────────────────────────────────
+
+    def _load_models(self) -> list:
+        """
+        Load all kmeans_clustering-compatible model classes.
+
+        1. Scans built-in model_scripts/ via pkgutil.
+        2. Appends user-supplied custom scripts loaded by file path.
+
+        Custom Model classes are tagged with is_custom = True.
+        """
         model_classes = []
         package_name = "main.model_scripts"
 
+        # ── Built-in scripts ──────────────────────────────────────────────────
         for _, module_name, _ in pkgutil.iter_modules([str(self.scripts_path)]):
+            if module_name in _SKIP_STEMS:
+                continue
+
             full_module_name = f"{package_name}.{module_name}"
-            module = importlib.import_module(full_module_name)
+            try:
+                module = importlib.import_module(full_module_name)
+            except Exception as exc:
+                print(f"⚠️ Skipping {module_name}: import failed ({exc})")
+                continue
 
             ok, _ = validate_module(module)
             if not ok:
@@ -33,25 +63,89 @@ class KMClusteringTrainer:
             if ModelClass is not None:
                 model_classes.append(ModelClass)
 
+        # ── Custom scripts ────────────────────────────────────────────────────
+        for custom_path in self.custom_script_paths:
+            custom_path = Path(custom_path)
+
+            if not custom_path.exists():
+                print(f"⚠️ Custom script not found, skipping: {custom_path}")
+                continue
+
+            unique_name = f"_custom_{custom_path.stem}_{id(custom_path)}"
+            try:
+                spec = importlib.util.spec_from_file_location(unique_name, custom_path)
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[unique_name] = module
+                spec.loader.exec_module(module)  # type: ignore[union-attr]
+            except Exception as exc:
+                print(f"⚠️ Custom script {custom_path.name}: import failed ({exc})")
+                continue
+
+            ok, reason = validate_module(module)
+            if not ok:
+                print(f"⚠️ Custom script {custom_path.name}: {reason}")
+                continue
+
+            supported = getattr(module, "SUPPORTED_PROBLEM_TYPES", [])
+            if "kmeans_clustering" not in supported:
+                print(
+                    f"⚠️ Custom script {custom_path.name} does not support "
+                    "'kmeans_clustering', skipping."
+                )
+                continue
+
+            ModelClass = getattr(module, "Model", None)
+            if ModelClass is not None:
+                ModelClass.is_custom = True
+                model_classes.append(ModelClass)
+                print(f"✅ Loaded custom script: {custom_path.name}")
+
         return model_classes
 
-    def train_all(self, X_train, y_train=None, X_val=None, y_val=None, n_clusters: int = 3):
+    # ── Training ──────────────────────────────────────────────────────────────
+
+    def train_all(
+        self,
+        X_train,
+        y_train=None,
+        X_val=None,
+        y_val=None,
+        n_clusters: int = 3,
+    ):
+        """
+        Train all clustering model scripts.
+
+        Returns:
+            dict[str, dict]: model_name → {
+                "metrics": {...},
+                "metadata": {...},
+                "cluster_labels": list | None,
+                "is_custom": bool,
+            }
+        """
         models = self._load_models()
         results = {}
 
         for ModelClass in models:
             model_name = ModelClass.MODEL_NAME
             save_path = self.output_path / f"{model_name}.joblib"
+            is_custom = bool(getattr(ModelClass, "is_custom", False))
 
-            model = ModelClass()
-            pipe, metrics, metadata = model.train_model(
-                X_train=X_train,
-                y_train=None,
-                X_val=None,
-                y_val=None,
-                save_path=save_path,
-                n_clusters=n_clusters,
-            )
+            print(f"🚀 Training {model_name}{'  [custom]' if is_custom else ''}...")
+
+            try:
+                model = ModelClass()
+                pipe, metrics, metadata = model.train_model(
+                    X_train=X_train,
+                    y_train=None,
+                    X_val=None,
+                    y_val=None,
+                    save_path=save_path,
+                    n_clusters=n_clusters,
+                )
+            except Exception as exc:
+                print(f"⚠️ Skipping {model_name}: training failed ({exc})")
+                continue
 
             try:
                 labels = pipe.predict(X_train).tolist()
@@ -123,6 +217,9 @@ class KMClusteringTrainer:
                 "metrics": metrics,
                 "metadata": metadata,
                 "cluster_labels": labels,
+                "is_custom": is_custom,
             }
+
+            print(f"✅ Completed {model_name}")
 
         return results

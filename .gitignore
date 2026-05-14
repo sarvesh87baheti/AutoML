@@ -46,3 +46,7 @@ yarn-error.log*
 package-lock.json
 
 UI/.next/
+
+main/model_results/
+main/saved_models/
+main/processed_data/

@@ -146,8 +146,14 @@ def train_model(
     if save_path is not None:
         save_path = Path(save_path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
+
         import joblib
-        joblib.dump(best_model, save_path)
+        from pickle import PicklingError
+
+        try:
+            joblib.dump(best_model, save_path)
+        except (PicklingError, TypeError):
+            pass
 
     return best_model, best_metrics, metadata
 

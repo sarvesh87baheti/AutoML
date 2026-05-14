@@ -32,7 +32,7 @@ def test_orchestrator_regression(tmp_path, monkeypatch):
     # 2. Mock RegressionTrainer so orchestrator doesn't actually train anything
     # --------------------------------------------------------------------
     class FakeRegressionTrainer:
-        def __init__(self, scripts_path, output_path):
+        def __init__(self, scripts_path, output_path, custom_script_paths=None):
             self.called = False
 
         def train_all(self, X_train, y_train, X_val, y_val):
@@ -75,7 +75,7 @@ def test_orchestrator_kmeans_clustering_runs(tmp_path, monkeypatch):
         json.dump({"problem_type": "kmeans_clustering", "n_clusters": 2}, f)
 
     class FakeKMeansTrainer:
-        def __init__(self, scripts_path, output_path):
+        def __init__(self, scripts_path, output_path, custom_script_paths=None):
             pass
 
         def train_all(self, X_train, y_train, X_val, y_val, n_clusters):

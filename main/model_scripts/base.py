@@ -3,7 +3,6 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from sklearn.pipeline import Pipeline
-from inspect import signature, isfunction
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
@@ -58,14 +57,18 @@ def validate_module(mod) -> Tuple[bool, str]:
         # duck-type: check method exists
         if not hasattr(ModClass, "train_model"):
             return False, "Model class has no train_model method"
-        # check subclassing ModelScript if available
-        try:
-            from .base import ModelScript as _ModelScript  # type: ignore
-            if not issubclass(ModClass, _ModelScript):
-                return False, "Model class must subclass ModelScript"
-        except Exception:
-            # fallback: ignore if import fails
-            pass
+
+        # validate required class attributes instead of strict subclassing
+        required_attrs = [
+            "MODEL_NAME",
+            "SUPPORTED_PROBLEM_TYPES",
+            "train_model",
+        ]
+
+        for attr in required_attrs:
+            if not hasattr(ModClass, attr):
+                return False, f"Model class missing required attribute: {attr}"
+
     except Exception:
         return False, "unable to validate Model class"
 

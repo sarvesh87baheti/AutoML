@@ -1,11 +1,12 @@
 from pathlib import Path
 import json
 import numpy as np
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from .regression import RegressionTrainer
 from .classification import ClassificationTrainer
 from .kmclustering import KMClusteringTrainer
+
 
 def load_processed_dataset(path: Path):
     with open(path / "metadata.json", "r") as f:
@@ -44,24 +45,50 @@ def load_processed_dataset(path: Path):
 
 
 class Orchestrator:
-    def __init__(self, dataset_path: Path, model_scripts_path: Path, output_path: Path):
+    def __init__(
+        self,
+        dataset_path: Path,
+        model_scripts_path: Path,
+        output_path: Path,
+        custom_script_paths: List[Path] | None = None,
+    ):
         self.dataset_path = dataset_path
         self.model_scripts_path = model_scripts_path
         self.output_path = output_path
+        # Normalise: always store a list of Path objects (never None)
+        self.custom_script_paths: List[Path] = (
+            [Path(p) for p in custom_script_paths] if custom_script_paths else []
+        )
 
     def run(self):
-        X_train, y_train, X_val, y_val, metadata = load_processed_dataset(self.dataset_path)
+        X_train, y_train, X_val, y_val, metadata = load_processed_dataset(
+            self.dataset_path
+        )
 
         problem_type = metadata["problem_type"]
 
         if problem_type == "regression":
-            trainer = RegressionTrainer(self.model_scripts_path, self.output_path)
+            trainer = RegressionTrainer(
+                self.model_scripts_path,
+                self.output_path,
+                custom_script_paths=self.custom_script_paths,
+            )
         elif problem_type == "classification":
-            trainer = ClassificationTrainer(self.model_scripts_path, self.output_path)
+            trainer = ClassificationTrainer(
+                self.model_scripts_path,
+                self.output_path,
+                custom_script_paths=self.custom_script_paths,
+            )
         elif problem_type == "kmeans_clustering":
             n_clusters = int(metadata.get("n_clusters", 3))
-            trainer = KMClusteringTrainer(self.model_scripts_path, self.output_path)
-            return trainer.train_all(X_train, y_train=None, X_val=None, y_val=None, n_clusters=n_clusters)
+            trainer = KMClusteringTrainer(
+                self.model_scripts_path,
+                self.output_path,
+                custom_script_paths=self.custom_script_paths,
+            )
+            return trainer.train_all(
+                X_train, y_train=None, X_val=None, y_val=None, n_clusters=n_clusters
+            )
         else:
             raise ValueError(f"Unsupported problem type: {problem_type}")
 
