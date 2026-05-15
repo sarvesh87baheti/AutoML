@@ -1,0 +1,170 @@
+{
+    "image_classification": {
+        "metrics": {
+            "val": {
+                "accuracy": 1.0,
+                "loss": 0.09013376384973526
+            }
+        },
+        "models_comparison": [
+            {
+                "name": "mobilenetv2",
+                "value": 1.0,
+                "loss": 0.09013376384973526,
+                "time": 12.756017923355103,
+                "size_mb": 26.594650268554688
+            },
+            {
+                "name": "efficientnetb0",
+                "value": 1.0,
+                "loss": 0.07467345893383026,
+                "time": 21.53252387046814,
+                "size_mb": 43.385223388671875
+            },
+            {
+                "name": "mobilenetv3small",
+                "value": 0.875,
+                "loss": 0.19468599557876587,
+                "time": 11.498581886291504,
+                "size_mb": 11.349266052246094
+            }
+        ],
+        "all_models": {
+            "mobilenetv2": {
+                "accuracy": 1.0,
+                "loss": 0.09013376384973526,
+                "training_time": 12.756017923355103,
+                "report": {
+                    "cats": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 4.0
+                    },
+                    "dogs": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 4.0
+                    },
+                    "accuracy": 1.0,
+                    "macro avg": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 8.0
+                    },
+                    "weighted avg": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 8.0
+                    }
+                },
+                "model_size_mb": 26.594650268554688
+            },
+            "mobilenetv3small": {
+                "accuracy": 0.875,
+                "loss": 0.19468599557876587,
+                "training_time": 11.498581886291504,
+                "report": {
+                    "cats": {
+                        "precision": 1.0,
+                        "recall": 0.75,
+                        "f1-score": 0.8571428571428571,
+                        "support": 4.0
+                    },
+                    "dogs": {
+                        "precision": 0.8,
+                        "recall": 1.0,
+                        "f1-score": 0.8888888888888888,
+                        "support": 4.0
+                    },
+                    "accuracy": 0.875,
+                    "macro avg": {
+                        "precision": 0.9,
+                        "recall": 0.875,
+                        "f1-score": 0.873015873015873,
+                        "support": 8.0
+                    },
+                    "weighted avg": {
+                        "precision": 0.9,
+                        "recall": 0.875,
+                        "f1-score": 0.873015873015873,
+                        "support": 8.0
+                    }
+                },
+                "model_size_mb": 11.349266052246094
+            },
+            "efficientnetb0": {
+                "accuracy": 1.0,
+                "loss": 0.07467345893383026,
+                "training_time": 21.53252387046814,
+                "report": {
+                    "cats": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 4.0
+                    },
+                    "dogs": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 4.0
+                    },
+                    "accuracy": 1.0,
+                    "macro avg": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 8.0
+                    },
+                    "weighted avg": {
+                        "precision": 1.0,
+                        "recall": 1.0,
+                        "f1-score": 1.0,
+                        "support": 8.0
+                    }
+                },
+                "model_size_mb": 43.385223388671875
+            }
+        },
+        "classification_report": {
+            "cats": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 4.0
+            },
+            "dogs": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 4.0
+            },
+            "accuracy": 1.0,
+            "macro avg": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 8.0
+            },
+            "weighted avg": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 8.0
+            }
+        }
+    },
+    "best_model": "mobilenetv2",
+    "problem_type": "image_classification",
+    "image_mode": "standard",
+    "dataset_name": "pets",
+    "class_names": [
+        "cats",
+        "dogs"
+    ],
+    "num_classes": 2
+}

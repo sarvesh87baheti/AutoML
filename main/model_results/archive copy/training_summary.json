@@ -1,0 +1,370 @@
+{
+    "image_classification": {
+        "metrics": {
+            "val": {
+                "accuracy": 0.9684873949579832,
+                "loss": 0.13987113535404205
+            }
+        },
+        "models_comparison": [
+            {
+                "name": "efficientnetb0",
+                "value": 0.9684873949579832,
+                "loss": 0.13987113535404205,
+                "time": 3240.345486164093,
+                "size_mb": 43.411346435546875
+            },
+            {
+                "name": "mobilenetv2",
+                "value": 0.9626623376623377,
+                "loss": 0.14380542933940887,
+                "time": 2104.7115199565887,
+                "size_mb": 26.621383666992188
+            },
+            {
+                "name": "mobilenetv3small",
+                "value": 0.9456646294881589,
+                "loss": 0.20357127487659454,
+                "time": 776.3548767566681,
+                "size_mb": 11.375877380371094
+            }
+        ],
+        "all_models": {
+            "mobilenetv2": {
+                "accuracy": 0.9626623376623377,
+                "loss": 0.14380542933940887,
+                "training_time": 2104.7115199565887,
+                "report": {
+                    "cane": {
+                        "precision": 0.9494694290045478,
+                        "recall": 0.9655704008221994,
+                        "f1-score": 0.957452229299363,
+                        "support": 1946.0
+                    },
+                    "cavallo": {
+                        "precision": 0.9584139264990329,
+                        "recall": 0.9447092469018112,
+                        "f1-score": 0.9515122419587134,
+                        "support": 1049.0
+                    },
+                    "elefante": {
+                        "precision": 0.983754512635379,
+                        "recall": 0.9429065743944637,
+                        "f1-score": 0.9628975265017667,
+                        "support": 578.0
+                    },
+                    "farfalla": {
+                        "precision": 0.9669811320754716,
+                        "recall": 0.9704142011834319,
+                        "f1-score": 0.9686946249261665,
+                        "support": 845.0
+                    },
+                    "gallina": {
+                        "precision": 0.9828571428571429,
+                        "recall": 0.9717514124293786,
+                        "f1-score": 0.9772727272727273,
+                        "support": 1239.0
+                    },
+                    "gatto": {
+                        "precision": 0.961890243902439,
+                        "recall": 0.9460269865067467,
+                        "f1-score": 0.9538926681783825,
+                        "support": 667.0
+                    },
+                    "mucca": {
+                        "precision": 0.9105263157894737,
+                        "recall": 0.9276139410187667,
+                        "f1-score": 0.9189907038512616,
+                        "support": 746.0
+                    },
+                    "pecora": {
+                        "precision": 0.9299191374663073,
+                        "recall": 0.9478021978021978,
+                        "f1-score": 0.9387755102040817,
+                        "support": 728.0
+                    },
+                    "ragno": {
+                        "precision": 0.9839627521986549,
+                        "recall": 0.9860031104199067,
+                        "f1-score": 0.9849818746763335,
+                        "support": 1929.0
+                    },
+                    "scoiattolo": {
+                        "precision": 0.9811066126855601,
+                        "recall": 0.9758389261744966,
+                        "f1-score": 0.9784656796769852,
+                        "support": 745.0
+                    },
+                    "accuracy": 0.9626623376623377,
+                    "macro avg": {
+                        "precision": 0.9608881205114009,
+                        "recall": 0.9578636997653399,
+                        "f1-score": 0.9592935786545782,
+                        "support": 10472.0
+                    },
+                    "weighted avg": {
+                        "precision": 0.9628835002317275,
+                        "recall": 0.9626623376623377,
+                        "f1-score": 0.9627110419489484,
+                        "support": 10472.0
+                    }
+                },
+                "model_size_mb": 26.621383666992188
+            },
+            "mobilenetv3small": {
+                "accuracy": 0.9456646294881589,
+                "loss": 0.20357127487659454,
+                "training_time": 776.3548767566681,
+                "report": {
+                    "cane": {
+                        "precision": 0.9272183449651047,
+                        "recall": 0.9558067831449126,
+                        "f1-score": 0.9412955465587044,
+                        "support": 1946.0
+                    },
+                    "cavallo": {
+                        "precision": 0.9402697495183044,
+                        "recall": 0.9304099142040038,
+                        "f1-score": 0.9353138476281744,
+                        "support": 1049.0
+                    },
+                    "elefante": {
+                        "precision": 0.9647887323943662,
+                        "recall": 0.9480968858131488,
+                        "f1-score": 0.956369982547993,
+                        "support": 578.0
+                    },
+                    "farfalla": {
+                        "precision": 0.951764705882353,
+                        "recall": 0.9573964497041421,
+                        "f1-score": 0.9545722713864306,
+                        "support": 845.0
+                    },
+                    "gallina": {
+                        "precision": 0.9626623376623377,
+                        "recall": 0.9572235673930589,
+                        "f1-score": 0.9599352488870903,
+                        "support": 1239.0
+                    },
+                    "gatto": {
+                        "precision": 0.9352850539291218,
+                        "recall": 0.9100449775112444,
+                        "f1-score": 0.9224924012158054,
+                        "support": 667.0
+                    },
+                    "mucca": {
+                        "precision": 0.9077134986225895,
+                        "recall": 0.8833780160857909,
+                        "f1-score": 0.8953804347826086,
+                        "support": 746.0
+                    },
+                    "pecora": {
+                        "precision": 0.9188445667125172,
+                        "recall": 0.9175824175824175,
+                        "f1-score": 0.9182130584192439,
+                        "support": 728.0
+                    },
+                    "ragno": {
+                        "precision": 0.9752321981424149,
+                        "recall": 0.9797822706065319,
+                        "f1-score": 0.9775019394879751,
+                        "support": 1929.0
+                    },
+                    "scoiattolo": {
+                        "precision": 0.948509485094851,
+                        "recall": 0.9395973154362416,
+                        "f1-score": 0.9440323668240054,
+                        "support": 745.0
+                    },
+                    "accuracy": 0.9456646294881589,
+                    "macro avg": {
+                        "precision": 0.9432288672923962,
+                        "recall": 0.9379318597481492,
+                        "f1-score": 0.9405107097738032,
+                        "support": 10472.0
+                    },
+                    "weighted avg": {
+                        "precision": 0.9456749702852594,
+                        "recall": 0.9456646294881589,
+                        "f1-score": 0.9455959940235619,
+                        "support": 10472.0
+                    }
+                },
+                "model_size_mb": 11.375877380371094
+            },
+            "efficientnetb0": {
+                "accuracy": 0.9684873949579832,
+                "loss": 0.13987113535404205,
+                "training_time": 3240.345486164093,
+                "report": {
+                    "cane": {
+                        "precision": 0.9551637279596977,
+                        "recall": 0.9743062692702981,
+                        "f1-score": 0.9646400407021114,
+                        "support": 1946.0
+                    },
+                    "cavallo": {
+                        "precision": 0.9646271510516252,
+                        "recall": 0.9618684461391802,
+                        "f1-score": 0.9632458233890214,
+                        "support": 1049.0
+                    },
+                    "elefante": {
+                        "precision": 0.9911504424778761,
+                        "recall": 0.9688581314878892,
+                        "f1-score": 0.9798775153105862,
+                        "support": 578.0
+                    },
+                    "farfalla": {
+                        "precision": 0.9817073170731707,
+                        "recall": 0.9526627218934911,
+                        "f1-score": 0.9669669669669669,
+                        "support": 845.0
+                    },
+                    "gallina": {
+                        "precision": 0.9813614262560778,
+                        "recall": 0.9774011299435028,
+                        "f1-score": 0.9793772745653053,
+                        "support": 1239.0
+                    },
+                    "gatto": {
+                        "precision": 0.9723502304147466,
+                        "recall": 0.9490254872563718,
+                        "f1-score": 0.960546282245827,
+                        "support": 667.0
+                    },
+                    "mucca": {
+                        "precision": 0.9331550802139037,
+                        "recall": 0.935656836461126,
+                        "f1-score": 0.9344042838018741,
+                        "support": 746.0
+                    },
+                    "pecora": {
+                        "precision": 0.9536152796725784,
+                        "recall": 0.9601648351648352,
+                        "f1-score": 0.9568788501026694,
+                        "support": 728.0
+                    },
+                    "ragno": {
+                        "precision": 0.978952772073922,
+                        "recall": 0.9885951270088128,
+                        "f1-score": 0.9837503224142378,
+                        "support": 1929.0
+                    },
+                    "scoiattolo": {
+                        "precision": 0.9757412398921833,
+                        "recall": 0.9718120805369127,
+                        "f1-score": 0.9737726967047747,
+                        "support": 745.0
+                    },
+                    "accuracy": 0.9684873949579832,
+                    "macro avg": {
+                        "precision": 0.9687824667085781,
+                        "recall": 0.9640351065162418,
+                        "f1-score": 0.9663460056203373,
+                        "support": 10472.0
+                    },
+                    "weighted avg": {
+                        "precision": 0.968604591295948,
+                        "recall": 0.9684873949579832,
+                        "f1-score": 0.9684885334124754,
+                        "support": 10472.0
+                    }
+                },
+                "model_size_mb": 43.411346435546875
+            }
+        },
+        "classification_report": {
+            "cane": {
+                "precision": 0.9551637279596977,
+                "recall": 0.9743062692702981,
+                "f1-score": 0.9646400407021114,
+                "support": 1946.0
+            },
+            "cavallo": {
+                "precision": 0.9646271510516252,
+                "recall": 0.9618684461391802,
+                "f1-score": 0.9632458233890214,
+                "support": 1049.0
+            },
+            "elefante": {
+                "precision": 0.9911504424778761,
+                "recall": 0.9688581314878892,
+                "f1-score": 0.9798775153105862,
+                "support": 578.0
+            },
+            "farfalla": {
+                "precision": 0.9817073170731707,
+                "recall": 0.9526627218934911,
+                "f1-score": 0.9669669669669669,
+                "support": 845.0
+            },
+            "gallina": {
+                "precision": 0.9813614262560778,
+                "recall": 0.9774011299435028,
+                "f1-score": 0.9793772745653053,
+                "support": 1239.0
+            },
+            "gatto": {
+                "precision": 0.9723502304147466,
+                "recall": 0.9490254872563718,
+                "f1-score": 0.960546282245827,
+                "support": 667.0
+            },
+            "mucca": {
+                "precision": 0.9331550802139037,
+                "recall": 0.935656836461126,
+                "f1-score": 0.9344042838018741,
+                "support": 746.0
+            },
+            "pecora": {
+                "precision": 0.9536152796725784,
+                "recall": 0.9601648351648352,
+                "f1-score": 0.9568788501026694,
+                "support": 728.0
+            },
+            "ragno": {
+                "precision": 0.978952772073922,
+                "recall": 0.9885951270088128,
+                "f1-score": 0.9837503224142378,
+                "support": 1929.0
+            },
+            "scoiattolo": {
+                "precision": 0.9757412398921833,
+                "recall": 0.9718120805369127,
+                "f1-score": 0.9737726967047747,
+                "support": 745.0
+            },
+            "accuracy": 0.9684873949579832,
+            "macro avg": {
+                "precision": 0.9687824667085781,
+                "recall": 0.9640351065162418,
+                "f1-score": 0.9663460056203373,
+                "support": 10472.0
+            },
+            "weighted avg": {
+                "precision": 0.968604591295948,
+                "recall": 0.9684873949579832,
+                "f1-score": 0.9684885334124754,
+                "support": 10472.0
+            }
+        }
+    },
+    "best_model": "efficientnetb0",
+    "problem_type": "image_classification",
+    "image_mode": "standard",
+    "dataset_name": "archive copy",
+    "class_names": [
+        "cane",
+        "cavallo",
+        "elefante",
+        "farfalla",
+        "gallina",
+        "gatto",
+        "mucca",
+        "pecora",
+        "ragno",
+        "scoiattolo"
+    ],
+    "num_classes": 10
+}
