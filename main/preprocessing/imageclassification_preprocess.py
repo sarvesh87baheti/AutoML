@@ -89,14 +89,17 @@ def decode_and_resize(img_path):
     img = tf.io.read_file(img_path)
     img = tf.image.decode_image(img, channels=3, expand_animations=False)
     img = tf.image.resize(img, IMG_SIZE)
-    img = tf.cast(img, tf.float32) / 255.0
+    # Keeping images in raw 0..255 pixel space. Keras Applications backbones apply
+    # their own ImageNet preprocessing inside the model.
+    img = tf.cast(img, tf.float32)
     return img
 
 # 🔥 AUGMENTATION (only for training later)
 def augment(image, label):
     image = tf.image.random_flip_left_right(image)
-    image = tf.image.random_brightness(image, max_delta=0.1)
+    image = tf.image.random_brightness(image, max_delta=25.5)
     image = tf.image.random_contrast(image, 0.9, 1.1)
+    image = tf.clip_by_value(image, 0.0, 255.0)
     return image, label
 
 

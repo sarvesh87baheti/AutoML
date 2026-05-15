@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 IMG_SIZE = (224, 224)
 LEARNING_RATE = 1e-3
@@ -15,7 +16,8 @@ def build_model(num_classes):
     base.trainable = False
 
     inputs = keras.Input(shape=(*IMG_SIZE, 3))
-    x = base(inputs, training=False)
+    x = layers.Lambda(preprocess_input, name="preprocess")(inputs)
+    x = base(x, training=False)
     x = layers.GlobalAveragePooling2D()(x)
     x = layers.BatchNormalization()(x)
     x = layers.Dense(256, activation="relu")(x)
