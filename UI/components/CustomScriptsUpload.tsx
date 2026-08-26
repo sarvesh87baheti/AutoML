@@ -246,7 +246,7 @@ export default function CustomScriptsUpload({
             models will be trained alongside the built-in ones and appear on the results page with
             a <span className="font-medium text-teal-600">Custom</span> badge.{" "}
             <a
-              href="https://github.com/sarvesh87baheti/AutoML/blob/main/main/model_scripts/example_custom_model.py"
+              href="https://github.com/sarvesh87baheti/AutoML/blob/main/main/model_scripts/lasso.py"
               target="_blank"
               rel="noreferrer"
               className="underline underline-offset-2 text-primary"
